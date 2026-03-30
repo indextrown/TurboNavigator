@@ -7,7 +7,6 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		DF19D70B2F797CB10057E916 /* LinkNavigator in Frameworks */ = {isa = PBXBuildFile; productRef = DF19D70A2F797CB10057E916 /* LinkNavigator */; };
 		DF364EC62F79510D00E04CC9 /* TurboNavigator in Frameworks */ = {isa = PBXBuildFile; productRef = DF364EC52F79510D00E04CC9 /* TurboNavigator */; };
 /* End PBXBuildFile section */
 
@@ -57,7 +56,6 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				DF19D70B2F797CB10057E916 /* LinkNavigator in Frameworks */,
 				DF364EC62F79510D00E04CC9 /* TurboNavigator in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -120,7 +118,6 @@
 			name = TurboNavigatorDemo;
 			packageProductDependencies = (
 				DF364EC52F79510D00E04CC9 /* TurboNavigator */,
-				DF19D70A2F797CB10057E916 /* LinkNavigator */,
 			);
 			productName = TurboNavigatorDemo;
 			productReference = DF364E9A2F7950F700E04CC9 /* TurboNavigatorDemo.app */;
@@ -206,7 +203,6 @@
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
 				DF364EC42F79510D00E04CC9 /* XCLocalSwiftPackageReference "../../../TurboNavigator" */,
-				DF19D7092F797CB10057E916 /* XCRemoteSwiftPackageReference "LinkNavigator" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = DF364E9B2F7950F700E04CC9 /* Products */;
@@ -579,23 +575,7 @@
 		};
 /* End XCLocalSwiftPackageReference section */
 
-/* Begin XCRemoteSwiftPackageReference section */
-		DF19D7092F797CB10057E916 /* XCRemoteSwiftPackageReference "LinkNavigator" */ = {
-			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/forXifLess/LinkNavigator";
-			requirement = {
-				kind = upToNextMajorVersion;
-				minimumVersion = 1.4.2;
-			};
-		};
-/* End XCRemoteSwiftPackageReference section */
-
 /* Begin XCSwiftPackageProductDependency section */
-		DF19D70A2F797CB10057E916 /* LinkNavigator */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = DF19D7092F797CB10057E916 /* XCRemoteSwiftPackageReference "LinkNavigator" */;
-			productName = LinkNavigator;
-		};
 		DF364EC52F79510D00E04CC9 /* TurboNavigator */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = TurboNavigator;
