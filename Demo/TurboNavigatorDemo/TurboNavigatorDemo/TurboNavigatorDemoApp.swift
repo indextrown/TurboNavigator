@@ -16,10 +16,26 @@ struct TurboNavigatorDemoApp: App {
     
     var body: some Scene {
         WindowGroup {
+            /*
             NavigationHost(
                 navigator: navigator,
                 initialRoutes: [.home]
             )
+             */
+            TabNavigationHost(
+              navigator: navigator,
+              items: [
+                .init(
+                  tag: 0,
+                  route: .home,
+                  tabBarItem: UITabBarItem(title: "Home", image: nil, tag: 0),
+                  prefersLargeTitles: true),
+                .init(
+                  tag: 1,
+                  route: .settings,
+                  tabBarItem: UITabBarItem(title: "Settings", image: nil, tag: 1),
+                  prefersLargeTitles: true)
+              ])
         }
     }
 }

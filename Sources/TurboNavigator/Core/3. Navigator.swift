@@ -154,9 +154,9 @@ extension Navigator {
             dependencies: dependencies
         )
         
-        singleStackCoordinator.append(
+        singleStackCoordinator.replace(
             viewControllers: newControllers,
-            to: activeController,
+            on: activeController,
             animated: animated
         )
     }
