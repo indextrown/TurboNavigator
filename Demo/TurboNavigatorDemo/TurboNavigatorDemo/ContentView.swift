@@ -33,6 +33,7 @@ struct ContentView: View {
             VStack {
                 Button {
                     coordinator.route(.push(.detail))
+                    print()
                 } label: {
                     Text("Detail 이동")
                 }
@@ -51,6 +52,7 @@ struct DetailView: View {
             
             Button {
                 coordinator.route(.push(.detail2))
+                print()
             } label: {
                 Text("Detail2 이동")
             }
