@@ -109,6 +109,8 @@ extension RouteBuilder where Route: Equatable {
         _ route: Route,
         build: @escaping (RouteContext<Dependencies, Route>) -> RouteViewController?
     ) -> Self {
+        /// route: .home
+        /// $0: 나중에 들어오는 값
         .init(matches: { $0 == route }, build: build)
     }
 }
