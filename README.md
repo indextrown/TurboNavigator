@@ -1,5 +1,10 @@
 <img width="100%" alt="스크린샷 2026-03-31 오전 3 06 26" src="https://github.com/user-attachments/assets/1a3ad137-e28d-4ed8-8bed-380124982434" />
 
+<!-- <img src="https://github.com/user-attachments/assets/d279545d-5cb3-4673-bc13-28d290d8b0d2" width=220 align=right> -->
+# Example
+| <img src="https://github.com/user-attachments/assets/87d844e8-8214-4aa7-b988-23f157684776" width=150> | <img src="https://github.com/user-attachments/assets/c38d6256-7bb7-4257-a9f2-978be32a8605" width=150> | <img src="https://github.com/user-attachments/assets/4143ca3e-c60c-4edc-8659-e97617d1b8a8" width=150> | <img src="https://github.com/user-attachments/assets/ea4bdb80-7f64-4949-a301-d06feb161792" width=150> |
+|:---:|:---:|:---:|:---:|
+| push(42) | push([42, 99]) | present | presentFullScreen |
 
 # TurboNavigator
 
@@ -11,9 +16,6 @@ SwiftUI로 화면을 만들면서도, 실제 이동 제어는 UIKit stack, tab, 
 
 `NavigationStack`은 선언형 화면 경로 표현에는 좋지만, 복잡한 앱에서 필요한 navigation orchestration을 전담하기에는 추상화가 다르다.  
 `TurboNavigator`는 그 지점을 해결하기 위해 navigation 엔진을 UIKit 기반으로 두었다.
-
-<img src="https://github.com/user-attachments/assets/d279545d-5cb3-4673-bc13-28d290d8b0d2" width=220 align=right>
-
 
 ### 강점
 
