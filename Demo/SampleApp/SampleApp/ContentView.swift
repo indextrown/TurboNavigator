@@ -1,24 +1,41 @@
 //
-//  ContentView.swift
+//  SettingView.swift
 //  SampleApp
 //
 //  Created by 김동현 on 3/31/26.
 //
 
 import SwiftUI
+import TurboNavigator
 
-struct ContentView: View {
+struct SettingView: View {
+    let navigator: Navigator<AppDependencies, AppRoute>
     var body: some View {
         VStack {
-            Image(systemName: "globe")
-                .imageScale(.large)
-                .foregroundStyle(.tint)
-            Text("Hello, world!")
+            Text(String(describing: self))
         }
-        .padding()
     }
 }
 
 #Preview {
-    ContentView()
+    // 1
+    SettingView(
+        navigator: .preview(dependencies: (.init()))
+    )
+
+    SettingView(navigator: .preview)
+    
 }
+
+
+//extension Navigator where Dependencies == Void {
+//    
+//    public convenience init(
+//        registry: RouteRegistry<Void, Route>
+//    ) {
+//        self.init(
+//            dependencies: (),
+//            registry: registry
+//        )
+//    }
+//}
