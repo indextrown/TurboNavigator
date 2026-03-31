@@ -4,8 +4,10 @@
 
 # TurboNavigator
 
-`TurboNavigator`는 UIKit controller를 코어로 두는 typed route 기반 navigation 라이브러리다.
-`LinkNavigator`를 벤치마킹했지만, 문자열 path 대신 타입 기반 route와 명시적 DI를 중심으로 다시 정리하는 방향을 목표로 한다.
+`TurboNavigator`는 UIKit navigation controller를 엔진으로 사용하는 typed route 기반 navigation 라이브러리다.  
+SwiftUI 화면 작성은 그대로 활용하면서도, 실제 이동 제어는 UIKit stack, tab, modal 위에서 명시적으로 다룰 수 있게 설계했다.  
+
+`LinkNavigator`에서 영감을 받았지만, 문자열 path 중심 구성 대신 `enum` 기반 route, 명시적 dependency injection, route registry 조합으로 더 타입 안전하고 추적 가능한 구조를 목표로 한다.
 
 ## 왜 UIKit 엔진 기반인가
 
@@ -116,338 +118,9 @@ targets: [
 공개 저장소를 기준으로 붙일 때는 `https://github.com/indextrown/TurboNavigator.git`와 `from: "1.0.0"` 조합을 사용하면 된다.
 로컬에서 같이 개발 중이라면 로컬 패키지 방식이 가장 빠르다.
 
-## 사용법
+## 빠른 시작
 
 처음 붙일 때는 아래 순서대로 하면 된다.
-
-### 1. Route를 만든다
-
-```swift
-enum AppRoute: Hashable {
-  case home
-  case detail(id: String)
-  case settings
-}
-```
-
-- 고정 화면이면 `.home`, `.settings`처럼 단순 case를 쓴다.
-- 대상이 달라지는 화면이면 `.detail(id:)`처럼 연관값을 쓴다.
-
-### 2. Dependencies를 만든다
-
-```swift
-struct AppDependencies {
-  let userRepository: UserRepository
-  let analytics: AnalyticsClient
-}
-```
-
-- 화면 생성에 필요한 외부 객체를 한 곳에 모은다.
-- builder 안에서는 `context.dependencies`로 접근한다.
-
-### 3. RouteRegistry에 화면 생성 규칙을 등록한다
-
-```swift
-let registry = RouteRegistry<AppDependencies, AppRoute>()
-  .registering(.home) { context in
-    WrappingController(route: context.route, title: "Home") {
-      HomeView(navigator: context.navigator)
-    }
-  }
-  .registering(
-    extracting: { (route: AppRoute) -> String? in
-      guard case let .detail(id) = route else { return nil }
-      return id
-    },
-    build: { context, id in
-      WrappingController(route: context.route, title: "Detail") {
-        DetailView(
-          userID: id,
-          repository: context.dependencies.userRepository,
-          navigator: context.navigator)
-      }
-    })
-```
-
-- `registering(.home)`는 고정 route 등록이다.
-- `registering(extracting:)`는 `.detail(id:)` 같은 연관값 route 등록에 쓴다.
-
-### 4. Navigator를 만든다
-
-```swift
-let navigator = Navigator(
-  dependencies: AppDependencies(
-    userRepository: DefaultUserRepository(),
-    analytics: DefaultAnalyticsClient()),
-  registry: registry)
-```
-
-- 이 객체가 실제 네비게이션의 중심이다.
-- 화면에서는 `UIViewController`를 직접 다루지 않고, 이 navigator만 호출하면 된다.
-
-### 5. 앱 시작점에 연결한다
-
-단일 stack 앱:
-
-```swift
-NavigationHost(
-  navigator: navigator,
-  initialRoutes: [.home],
-  prefersLargeTitles: true)
-```
-
-탭 앱:
-
-```swift
-TabNavigationHost(
-  navigator: navigator,
-  items: [
-    .init(
-      tag: 0,
-      route: .home,
-      tabBarItem: UITabBarItem(title: "Home", image: nil, tag: 0)),
-    .init(
-      tag: 1,
-      route: .settings,
-      tabBarItem: UITabBarItem(title: "Settings", image: nil, tag: 1))
-  ])
-```
-
-### 6. 화면에서 navigator를 호출한다
-
-```swift
-navigator.push(.detail(id: "42"))
-navigator.present(.settings)
-navigator.presentFullScreen(.settings)
-navigator.back()
-navigator.switchTab(tag: 1)
-```
-
-자주 쓰는 의미는 이렇다.
-
-- `push`
-  현재 stack 뒤에 화면 추가
-- `replace`
-  현재 stack 전체 교체
-- `back`
-  한 단계 뒤로 가기
-- `backTo`
-  특정 route가 있는 위치까지 되돌아가기
-- `backOrPush`
-  있으면 되돌아가고, 없으면 새로 push
-- `present`
-  modal로 열기
-- `switchTab`
-  특정 탭으로 이동
-
-### 7. 딥링크를 붙이고 싶으면 parser를 구현한다
-
-```swift
-struct AppDeepLinkParser: DeepLinkParser {
-  func parse(url: URL) -> DeepLink<AppRoute>? {
-    guard let components = URLComponents(url: url, resolvingAgainstBaseURL: false) else {
-      return nil
-    }
-
-    switch components.host {
-    case "home":
-      return DeepLink(route: .home, action: .replace)
-    case "detail":
-      let id = components.queryItems?.first(where: { $0.name == "id" })?.value ?? ""
-      guard !id.isEmpty else { return nil }
-      return DeepLink(route: .detail(id: id), action: .push)
-    default:
-      return nil
-    }
-  }
-}
-```
-
-```swift
-.onOpenURL { url in
-  navigator.handle(url: url, parser: AppDeepLinkParser())
-}
-```
-
-### 8. 딥링크와 유니버설 링크 설정
-
-`TurboNavigator`는 URL을 직접 등록해주지는 않는다.
-앱이 URL을 받을 수 있게 iOS 설정을 해주고, 받은 URL을 parser에 넘기는 구조다.
-
-#### 커스텀 스킴 딥링크
-
-예:
-
-- `turbonavigator://home`
-- `turbonavigator://detail?id=42`
-
-설정 순서:
-
-1. Xcode에서 앱 target 선택
-2. `Info` 탭 이동
-3. `URL Types` 추가
-4. `Identifier`는 예: `io.turbonavigator.demo` 입력
-5. `URL Schemes`에는 전체 URL이 아니라 scheme만 입력
-6. 예: `turbonavigator`
-
-그 다음 SwiftUI 앱 시작점에서:
-
-```swift
-.onOpenURL { url in
-  navigator.handle(url: url, parser: AppDeepLinkParser())
-}
-```
-
-시뮬레이터 실행 순서:
-
-1. Xcode에서 `TurboNavigatorDemo`를 iPhone Simulator로 한 번 실행한다.
-2. 시뮬레이터가 켜진 상태를 확인한다.
-3. 아래 명령으로 URL을 앱에 보낸다.
-
-시뮬레이터 테스트:
-
-```bash
-xcrun simctl openurl booted "turbonavigator://home"
-xcrun simctl openurl booted "turbonavigator://detail?id=42"
-xcrun simctl openurl booted "turbonavigator://settings"
-```
-
-`No devices are booted.`가 나오면 아직 시뮬레이터가 실행되지 않은 상태다.
-먼저 Xcode에서 앱을 실행한 뒤 다시 시도하면 된다.
-
-`OSStatus error -10814`가 나오면 보통 아래 둘 중 하나다.
-
-- `URL Schemes`에 `turbonavigator`가 등록되지 않음
-- 등록 후 앱을 다시 빌드/실행하지 않음
-
-#### 유니버설 링크
-
-예:
-
-- `https://example.com/home`
-- `https://example.com/detail?id=42`
-
-필요한 것:
-
-1. 실제 도메인 준비
-2. 앱 target의 `Signing & Capabilities`에서 `Associated Domains` 추가
-3. 예: `applinks:example.com` 등록
-4. 서버에 `apple-app-site-association` 파일 배포
-5. 앱에서 동일하게 `.onOpenURL`로 URL 처리
-
-코드 연결은 딥링크와 동일하다.
-
-```swift
-.onOpenURL { url in
-  navigator.handle(url: url, parser: AppDeepLinkParser())
-}
-```
-
-시뮬레이터 테스트:
-
-```bash
-xcrun simctl openurl booted "https://example.com/home"
-xcrun simctl openurl booted "https://example.com/detail?id=42"
-```
-
-주의:
-
-- 유니버설 링크는 커스텀 스킴과 달리 URL scheme 등록만으로는 동작하지 않는다.
-- `Associated Domains`와 서버의 `apple-app-site-association` 파일이 모두 맞아야 한다.
-- 즉 샘플 앱 코드만으로는 바로 테스트되지 않고, 앱 설정과 서버 설정까지 끝나야 한다.
-
-차이는 URL을 앱으로 넘겨주는 iOS 설정이 다르다는 점이다.
-
-정리:
-
-- 커스텀 스킴 딥링크
-  - 앱 내부 URL scheme 등록만 있으면 비교적 바로 테스트 가능
-- 유니버설 링크
-  - `Associated Domains`와 서버 설정이 추가로 필요
-
-샘플 앱 현재 상태:
-
-- parser와 `.onOpenURL` 연결 예제는 포함돼 있음
-- URL scheme / Associated Domains / 서버 설정은 사용자가 앱 프로젝트에서 추가해야 함
-
-### 9. 가장 짧은 도입 체크리스트
-
-1. `AppRoute`를 만들었는가
-2. `AppDependencies`를 만들었는가
-3. `RouteRegistry`에 화면을 등록했는가
-4. `Navigator`를 생성했는가
-5. `NavigationHost` 또는 `TabNavigationHost`에 연결했는가
-6. 화면에서 `navigator.push/present/back`를 호출하고 있는가
-
-## 핵심 개념
-
-- `Route`
-  앱이 정의하는 typed navigation 값이다.
-- `Dependencies`
-  화면 생성에 필요한 외부 객체 묶음이다.
-- `RouteRegistry`
-  route를 어떤 화면으로 만들지 등록하는 곳이다.
-- `RouteContext`
-  builder에 전달되는 값으로 `route`, `navigator`, `dependencies`를 담는다.
-- `Navigator`
-  실제 push, pop, modal, tab 전환을 실행한다.
-- `DeepLinkParser`
-  URL을 typed route 기반 deep link로 바꾸는 parser 프로토콜이다.
-- `WrappingController`
-  SwiftUI `View`를 `UIViewController`로 감싸는 어댑터다.
-
-## 아키텍처
-
-`TurboNavigator`는 크게 `Core`, `Registry`, `Adapter`, `Model` 계층으로 나뉜다.
-
-### Core
-
-- `Navigator`
-  라이브러리의 메인 진입점이다. push, back, present, tab 전환 같은 공개 연산을 제공한다.
-- `SingleStackCoordinator`
-  하나의 `UINavigationController` stack을 읽고 바꾸는 역할을 맡는다.
-- `ModalCoordinator`
-  modal용 `UINavigationController`를 만들고 present/dismiss를 담당한다.
-- `TabCoordinator`
-  탭별 navigation controller를 만들고 현재 탭 전환을 담당한다.
-- `AnyRouteIdentifiable`
-  각 화면이 어떤 route에 대응하는지 stack 안에서 추적할 수 있게 해준다.
-
-### Registry
-
-- `RouteRegistry`
-  route를 어떤 화면으로 만들지 등록하는 장소다.
-- `RouteBuilder`
-  특정 route를 받아 `UIViewController`를 만드는 규칙이다.
-
-### Adapter
-
-- `NavigationHost`
-  단일 stack `Navigator`를 SwiftUI에 올리는 bridge다.
-- `TabNavigationHost`
-  탭 기반 `Navigator`를 SwiftUI에 올리는 bridge다.
-- `WrappingController`
-  SwiftUI `View`를 UIKit controller로 감싸는 어댑터다.
-
-### Model
-
-- `RouteContext`
-  builder에 전달되는 실행 컨텍스트다.
-- `TabNavigationItem`
-  탭 구성에 필요한 tag, root route, tab item 정보를 담는다.
-- `ModalPresentationStyle`
-  modal 표시 스타일을 추상화한 타입이다.
-
-### DeepLink
-
-- `DeepLink`
-  파싱된 URL 결과를 typed route 배열과 action으로 표현한다.
-- `DeepLinkAction`
-  `push`, `replace`, `present(style:)` 중 어떤 방식으로 적용할지 정한다.
-- `DeepLinkParser`
-  URL을 `DeepLink<Route>`로 바꾸는 parser 프로토콜이다.
-
-## 빠른 시작
 
 ### 1. Route 정의
 
@@ -582,6 +255,210 @@ struct AppDeepLinkParser: DeepLinkParser {
 - `turbonavigator://detail?id=42`
 - `turbonavigator://settings`
 
+## 상세 사용 가이드
+
+### Route 설계
+
+- 고정 화면이면 `.home`, `.settings`처럼 단순 case를 쓴다.
+- 대상이 달라지는 화면이면 `.detail(id:)`처럼 연관값을 쓴다.
+
+### Dependencies 설계
+
+- 화면 생성에 필요한 외부 객체를 한 곳에 모은다.
+- builder 안에서는 `context.dependencies`로 접근한다.
+
+### RouteRegistry 등록 규칙
+
+- `registering(.home)`는 고정 route 등록이다.
+- `registering(extracting:)`는 `.detail(id:)` 같은 연관값 route 등록에 쓴다.
+
+### Navigator 역할
+
+- 이 객체가 실제 네비게이션의 중심이다.
+- 화면에서는 `UIViewController`를 직접 다루지 않고, 이 navigator만 호출하면 된다.
+
+### 자주 쓰는 연산
+
+- `push`: 현재 stack 뒤에 화면 추가
+- `replace`: 현재 stack 전체 교체
+- `back`: 한 단계 뒤로 가기
+- `backTo`: 특정 route가 있는 위치까지 되돌아가기
+- `backOrPush`: 있으면 되돌아가고, 없으면 새로 push
+- `present`: modal로 열기
+- `switchTab`: 특정 탭으로 이동
+
+### 딥링크와 유니버설 링크 설정
+
+`TurboNavigator`는 URL을 직접 등록해주지는 않는다.
+앱이 URL을 받을 수 있게 iOS 설정을 해주고, 받은 URL을 parser에 넘기는 구조다.
+
+#### 커스텀 스킴 딥링크
+
+예:
+
+- `turbonavigator://home`
+- `turbonavigator://detail?id=42`
+
+설정 순서:
+
+1. Xcode에서 앱 target 선택
+2. `Info` 탭 이동
+3. `URL Types` 추가
+4. `Identifier`는 예: `io.turbonavigator.demo` 입력
+5. `URL Schemes`에는 전체 URL이 아니라 scheme만 입력
+6. 예: `turbonavigator`
+
+그 다음 SwiftUI 앱 시작점에서:
+
+```swift
+.onOpenURL { url in
+  navigator.handle(url: url, parser: AppDeepLinkParser())
+}
+```
+
+시뮬레이터 실행 순서:
+
+1. Xcode에서 `TurboNavigatorDemo`를 iPhone Simulator로 한 번 실행한다.
+2. 시뮬레이터가 켜진 상태를 확인한다.
+3. 아래 명령으로 URL을 앱에 보낸다.
+
+```bash
+xcrun simctl openurl booted "turbonavigator://home"
+xcrun simctl openurl booted "turbonavigator://detail?id=42"
+xcrun simctl openurl booted "turbonavigator://settings"
+```
+
+`No devices are booted.`가 나오면 아직 시뮬레이터가 실행되지 않은 상태다.
+먼저 Xcode에서 앱을 실행한 뒤 다시 시도하면 된다.
+
+`OSStatus error -10814`가 나오면 보통 아래 둘 중 하나다.
+
+- `URL Schemes`에 `turbonavigator`가 등록되지 않음
+- 등록 후 앱을 다시 빌드/실행하지 않음
+
+#### 유니버설 링크
+
+예:
+
+- `https://example.com/home`
+- `https://example.com/detail?id=42`
+
+필요한 것:
+
+1. 실제 도메인 준비
+2. 앱 target의 `Signing & Capabilities`에서 `Associated Domains` 추가
+3. 예: `applinks:example.com` 등록
+4. 서버에 `apple-app-site-association` 파일 배포
+5. 앱에서 동일하게 `.onOpenURL`로 URL 처리
+
+코드 연결은 딥링크와 동일하다.
+
+```swift
+.onOpenURL { url in
+  navigator.handle(url: url, parser: AppDeepLinkParser())
+}
+```
+
+시뮬레이터 테스트:
+
+```bash
+xcrun simctl openurl booted "https://example.com/home"
+xcrun simctl openurl booted "https://example.com/detail?id=42"
+```
+
+주의:
+
+- 유니버설 링크는 커스텀 스킴과 달리 URL scheme 등록만으로는 동작하지 않는다.
+- `Associated Domains`와 서버의 `apple-app-site-association` 파일이 모두 맞아야 한다.
+- 즉 샘플 앱 코드만으로는 바로 테스트되지 않고, 앱 설정과 서버 설정까지 끝나야 한다.
+
+정리:
+
+- 커스텀 스킴 딥링크: 앱 내부 URL scheme 등록만 있으면 비교적 바로 테스트 가능
+- 유니버설 링크: `Associated Domains`와 서버 설정이 추가로 필요
+
+샘플 앱 현재 상태:
+
+- parser와 `.onOpenURL` 연결 예제는 포함돼 있음
+- URL scheme / Associated Domains / 서버 설정은 사용자가 앱 프로젝트에서 추가해야 함
+
+### 가장 짧은 도입 체크리스트
+
+1. `AppRoute`를 만들었는가
+2. `AppDependencies`를 만들었는가
+3. `RouteRegistry`에 화면을 등록했는가
+4. `Navigator`를 생성했는가
+5. `NavigationHost` 또는 `TabNavigationHost`에 연결했는가
+6. 화면에서 `navigator.push/present/back`를 호출하고 있는가
+
+## 핵심 개념
+
+- `Route`
+  앱이 정의하는 typed navigation 값이다.
+- `Dependencies`
+  화면 생성에 필요한 외부 객체 묶음이다.
+- `RouteRegistry`
+  route를 어떤 화면으로 만들지 등록하는 곳이다.
+- `RouteContext`
+  builder에 전달되는 값으로 `route`, `navigator`, `dependencies`를 담는다.
+- `Navigator`
+  실제 push, pop, modal, tab 전환을 실행한다.
+- `DeepLinkParser`
+  URL을 typed route 기반 deep link로 바꾸는 parser 프로토콜이다.
+- `WrappingController`
+  SwiftUI `View`를 `UIViewController`로 감싸는 어댑터다.
+
+## 아키텍처
+
+`TurboNavigator`는 크게 `Core`, `Registry`, `Adapter`, `Model` 계층으로 나뉜다.
+
+### Core
+
+- `Navigator`
+  라이브러리의 메인 진입점이다. push, back, present, tab 전환 같은 공개 연산을 제공한다.
+- `SingleStackCoordinator`
+  하나의 `UINavigationController` stack을 읽고 바꾸는 역할을 맡는다.
+- `ModalCoordinator`
+  modal용 `UINavigationController`를 만들고 present/dismiss를 담당한다.
+- `TabCoordinator`
+  탭별 navigation controller를 만들고 현재 탭 전환을 담당한다.
+- `AnyRouteIdentifiable`
+  각 화면이 어떤 route에 대응하는지 stack 안에서 추적할 수 있게 해준다.
+
+### Registry
+
+- `RouteRegistry`
+  route를 어떤 화면으로 만들지 등록하는 장소다.
+- `RouteBuilder`
+  특정 route를 받아 `UIViewController`를 만드는 규칙이다.
+
+### Adapter
+
+- `NavigationHost`
+  단일 stack `Navigator`를 SwiftUI에 올리는 bridge다.
+- `TabNavigationHost`
+  탭 기반 `Navigator`를 SwiftUI에 올리는 bridge다.
+- `WrappingController`
+  SwiftUI `View`를 UIKit controller로 감싸는 어댑터다.
+
+### Model
+
+- `RouteContext`
+  builder에 전달되는 실행 컨텍스트다.
+- `TabNavigationItem`
+  탭 구성에 필요한 tag, root route, tab item 정보를 담는다.
+- `ModalPresentationStyle`
+  modal 표시 스타일을 추상화한 타입이다.
+
+### DeepLink
+
+- `DeepLink`
+  파싱된 URL 결과를 typed route 배열과 action으로 표현한다.
+- `DeepLinkAction`
+  `push`, `replace`, `present(style:)` 중 어떤 방식으로 적용할지 정한다.
+- `DeepLinkParser`
+  URL을 `DeepLink<Route>`로 바꾸는 parser 프로토콜이다.
+
 ## 현재 지원 연산
 
 아래 시간복잡도는 현재 구현 기준의 대략적인 비용이다.
@@ -668,7 +545,7 @@ struct AppDeepLinkParser: DeepLinkParser {
 - `backTo`와 `backOrPush`는 현재 stack에서 마지막 일치 화면을 찾기 위해 선형 탐색을 사용한다.
 - `switchTab`은 탭 controller 딕셔너리 조회를 사용하므로 기본적으로 `O(1)`이다.
 
-## 샘플 앱
+<!-- ## 샘플 앱
 
 가장 먼저 보는 걸 추천하는 파일은 아래다.
 
@@ -688,4 +565,4 @@ struct AppDeepLinkParser: DeepLinkParser {
 ## 참고
 
 - 패키지 정의: [Package.swift](/Users/kimdonghyeon/2025/개발/라이브러리/TurboNavigator/Package.swift)
-- 데모 앱 진입점: [TurboNavigatorDemoApp.swift](/Users/kimdonghyeon/2025/개발/라이브러리/TurboNavigator/Demo/TurboNavigatorDemo/TurboNavigatorDemo/TurboNavigatorDemoApp.swift)
+- 데모 앱 진입점: [TurboNavigatorDemoApp.swift](/Users/kimdonghyeon/2025/개발/라이브러리/TurboNavigator/Demo/TurboNavigatorDemo/TurboNavigatorDemo/TurboNavigatorDemoApp.swift) -->
