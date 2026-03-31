@@ -1,5 +1,5 @@
 //
-//  NavigationHost.swift
+//  NavigationContainer.swift
 //  TurboNavigator
 //
 //  Created by 김동현 on 3/30/26.
@@ -30,7 +30,7 @@ import SwiftUI
 /// - Lifecycle:
 ///   - makeUIViewController → 최초 생성 및 초기 화면 구성
 ///   - updateUIViewController → SwiftUI 업데이트 시 rootController 동기화
-public struct NavigationHost<Dependencies, Route: Hashable>: UIViewControllerRepresentable {
+public struct NavigationContainer<Dependencies, Route: Hashable>: UIViewControllerRepresentable {
     
     /// Navigator 인스턴스 (네비게이션 전체 관리)
     public let navigator: Navigator<Dependencies, Route>
@@ -42,7 +42,7 @@ public struct NavigationHost<Dependencies, Route: Hashable>: UIViewControllerRep
     public let prefersLargeTitles: Bool
     
     
-    /// NavigationHost 생성자
+    /// NavigationContainer 생성자
     ///
     /// - Parameters:
     ///   - navigator: Navigator 인스턴스
@@ -122,7 +122,7 @@ public struct NavigationHost<Dependencies, Route: Hashable>: UIViewControllerRep
  // MARK: - SwiftUI Root View
  struct RootView: View {
    var body: some View {
-     NavigationHost(
+     NavigationContainer(
        navigator: navigator,
        initialRoutes: [.home],
        prefersLargeTitles: true

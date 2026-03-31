@@ -1,5 +1,5 @@
 //
-//  TabNavigationHost.swift
+//  TabNavigationContainer.swift
 //  TurboNavigator
 //
 //  Created by 김동현 on 3/31/26.
@@ -31,7 +31,7 @@ import SwiftUI
 /// - Lifecycle:
 ///   - makeUIViewController → 탭 구성 및 초기 화면 설정
 ///   - updateUIViewController → 선택된 탭 상태 및 UI 동기화
-public struct TabNavigationHost<
+public struct TabNavigationContainer<
     Dependencies, Route: Hashable
 >: UIViewControllerRepresentable {
     
@@ -45,7 +45,7 @@ public struct TabNavigationHost<
     public let isTabBarHidden: Bool
     
     
-    /// TabNavigationHost 생성자
+    /// TabNavigationContainer 생성자
     ///
     /// - Parameters:
     ///   - navigator: Navigator 인스턴스
@@ -142,7 +142,7 @@ public struct TabNavigationHost<
  // MARK: - SwiftUI Root View
  struct RootView: View {
    var body: some View {
-     TabNavigationHost(
+     TabNavigationContainer(
        navigator: navigator,
        items: [
          .init(

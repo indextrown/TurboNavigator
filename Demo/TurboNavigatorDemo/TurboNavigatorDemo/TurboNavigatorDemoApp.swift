@@ -17,12 +17,12 @@ struct TurboNavigatorDemoApp: App {
     var body: some Scene {
         WindowGroup {
             /*
-            NavigationHost(
+            NavigationContainer(
                 navigator: navigator,
                 initialRoutes: [.home]
             )
              */
-            TabNavigationHost(
+            TabNavigationContainer(
               navigator: navigator,
               items: [
                 .init(

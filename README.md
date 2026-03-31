@@ -31,7 +31,7 @@ SwiftUI로 화면을 만들면서도, 실제 이동 제어는 UIKit stack, tab, 
   - route마다 어떤 화면을 만들지 등록하는 장소
 - `RouteContext`
   - builder에 전달되는 실행 컨텍스트. `route`, `navigator`, `dependencies`를 포함
-- `NavigationHost` / `TabNavigationHost`
+- `NavigationContainer` / `TabNavigationContainer`
   - SwiftUI에서 UIKit navigation 엔진을 올리는 bridge
 - `DeepLinkParser`
   - URL을 typed route 기반 deep link로 바꾸는 parser 프로토콜
@@ -150,7 +150,7 @@ let navigator = Navigator(
 단일 스택 앱:
 
 ```swift
-NavigationHost(
+NavigationContainer(
   navigator: navigator,
   initialRoutes: [.home],
   prefersLargeTitles: true
@@ -160,7 +160,7 @@ NavigationHost(
 탭 앱:
 
 ```swift
-TabNavigationHost(
+TabNavigationContainer(
   navigator: navigator,
   items: [
     .init(
@@ -236,7 +236,7 @@ struct AppDeepLinkParser: DeepLinkParser {
 2. `AppDependencies`를 만들었는가
 3. `RouteRegistry`에 화면을 등록했는가
 4. `Navigator`를 생성했는가
-5. `NavigationHost` 또는 `TabNavigationHost`에 연결했는가
+5. `NavigationContainer` 또는 `TabNavigationContainer`에 연결했는가
 6. 화면에서 `navigator.push/present/back`를 호출하고 있는가
 
 ## 지원 연산
