@@ -24,12 +24,32 @@ enum AppRoute: Hashable {
 enum AppRouter {
     static func buildNavigator() -> Navigator<AppDependencies, AppRoute> {
         let registry = RouteRegistry<AppDependencies, AppRoute>()
+            // home
             .registering(.home) { context in
                 WrappingController(route: context.route) {
-                    HomeView(naviagtor: context.navigator)
+                    HomeView(navigator: context.navigator)
                 }
             }
-        
+            // setting
+            .registering(.setting) { context in
+                WrappingController(route: context.route) {
+                    SettingView(navigator: context.navigator)
+                }
+            }
+            // detail
+            .registering(
+                extracting: { (route: AppRoute) -> String? in
+                    guard case let .detail(id) = route else { return nil }
+                    return id
+                },
+                build: { context, id in
+                    WrappingController(route: context.route, title: "Detail") {
+                        DetailView(
+                            navigator: context.navigator,
+                            userId: id
+                        )
+                    }
+                })
         return Navigator(
             dependencies: AppDependencies(),
             registry: registry

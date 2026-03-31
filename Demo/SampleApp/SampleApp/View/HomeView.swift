@@ -9,12 +9,27 @@ import SwiftUI
 import TurboNavigator
 
 struct HomeView: View {
-    let naviagtor: Navigator<AppDependencies, AppRoute>
+    let navigator: Navigator<AppDependencies, AppRoute>
     var body: some View {
-        Text("\(String(describing: Self.self))")
+        VStack {
+            Text("Home")
+                .font(.largeTitle)
+            
+            Button {
+                navigator.push(.detail(id: "TestId"))
+            } label: {
+                Text("Push")
+            }
+            
+            Button {
+                navigator.present(.detail(id: "TestId"))
+            } label: {
+                Text("Sheet")
+            }
+        }
     }
 }
 
 #Preview {
-    HomeView(naviagtor: .preview)
+    HomeView(navigator: .preview)
 }

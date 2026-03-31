@@ -7,6 +7,19 @@
 
 import UIKit
 
+/// 사용자가 sheet를 스와이프로 dismiss했을 때
+/// `Navigator.modalController` 에 남아 있는 stale 참조를 정리하기 위한 observer입니다.
+///
+/// `UIAdaptivePresentationControllerDelegate` 를 통해 interactive dismiss 완료 시점을 감지하고
+/// 외부에서 주입한 `onDidDismiss` 클로저를 실행합니다.
+private final class ModalPresentationObserver: NSObject, UIAdaptivePresentationControllerDelegate {
+    var onDidDismiss: (() -> Void)?
+
+    func presentationControllerDidDismiss(_ presentationController: UIPresentationController) {
+        onDidDismiss?()
+    }
+}
+
 /// `Navigator`는 Route를 입력받아.
 /// - Registry를 통해 ViewController를 생성하고
 /// - Stack / Modal / Tab Coordinator에 위임하여 화면 전환을 수행합니다.
@@ -40,6 +53,9 @@ public final class Navigator<Dependencies, Route: Hashable> {
     
     /// 현재 황성 modal NavigationController
     public var modalController: UINavigationController?
+
+    /// 제스처 dismiss 후 stale modal state를 정리하기 위한 observer
+    private let modalPresentationObserver = ModalPresentationObserver()
     
     /// Stack 전용 Coordinator
     public let singleStackCoordinator: SingleStackCoordinator<Route>
@@ -64,6 +80,9 @@ public final class Navigator<Dependencies, Route: Hashable> {
         self.singleStackCoordinator = singleStackCoordinator
         self.modalCoordinator = modalCoordinator
         self.tabCoordinator = tabCoordinator
+        self.modalPresentationObserver.onDidDismiss = { [weak self] in
+            self?.modalController = nil
+        }
     }
     
     
@@ -74,7 +93,11 @@ public final class Navigator<Dependencies, Route: Hashable> {
     ///   2. Tab
     ///   3. Root
     public var activeController: UINavigationController? {
-        return modalController ?? tabCoordinator.currentNavigationController ?? rootController
+        if let modalController, modalController.presentingViewController != nil {
+            return modalController
+        }
+
+        return tabCoordinator.currentNavigationController ?? rootController
     }
     
     
@@ -261,6 +284,8 @@ extension Navigator {
             animated: animated,
             presentationStyle: style
         )
+
+        modalController?.presentationController?.delegate = modalPresentationObserver
     }
     
     
@@ -295,6 +320,7 @@ extension Navigator {
     /// 현재 modal을 dismiss합니다.
     public func dismissModal(animated: Bool = true) {
         modalCoordinator.dismiss(modalController: modalController, animated: animated) { [weak self] in
+            self?.modalController?.presentationController?.delegate = nil
             self?.modalController = nil
         }
     }
