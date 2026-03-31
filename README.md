@@ -1,26 +1,28 @@
-
 <img width="100%" alt="스크린샷 2026-03-31 오전 3 06 26" src="https://github.com/user-attachments/assets/1a3ad137-e28d-4ed8-8bed-380124982434" />
 
 
 # TurboNavigator
 
-`TurboNavigator`는 UIKit navigation controller를 엔진으로 사용하는 typed route 기반 navigation 라이브러리다.  
+`TurboNavigator`는 UIKit navigation controller를 엔진으로 사용하는 typed route 기반 navigation 라이브러리다.    
 SwiftUI로 화면을 만들면서도, 실제 이동 제어는 UIKit stack, tab, modal 위에서 명시적으로 다룰 수 있게 설계했다.
 
 ## 왜 UIKit 엔진 기반인가
 
-`NavigationStack`은 선언형 화면 경로 표현에는 좋지만, 복잡한 앱에서 필요한 navigation orchestration을 전담하기에는 추상화가 다르다.
+`NavigationStack`은 선언형 화면 경로 표현에는 좋지만, 복잡한 앱에서 필요한 navigation orchestration을 전담하기에는 추상화가 다르다.  
 `TurboNavigator`는 그 지점을 해결하기 위해 navigation 엔진을 UIKit 기반으로 두었다.
+
+<img src="https://github.com/user-attachments/assets/d279545d-5cb3-4673-bc13-28d290d8b0d2" width=220 align=right>
+
 
 ### 강점
 
-- `stack`, `tab`, `modal`, `deep link`를 하나의 `Navigator` API로 통합한다.
-- 현재 활성 대상이 root stack인지, tab stack인지, modal stack인지 명확하게 통제할 수 있다.
-- `backTo`, `backOrPush`, `replace`, `switchTab` 같은 imperative 동작을 자연스럽게 지원한다.
-- `enum` 기반 route와 명시적 dependency injection으로 타입 안전하고 추적 가능한 구성을 만든다.
-- SwiftUI는 화면 작성에 집중하고, navigation 제어는 UIKit 엔진에 맡길 수 있다.
+- `stack`, `tab`, `modal`, `deep link`를 하나의 `Navigator` API로 통합한다.  
+- 현재 활성 대상이 root stack인지, tab stack인지, modal stack인지 명확하게 통제할 수 있다.  
+- `backTo`, `backOrPush`, `replace`, `switchTab` 같은 imperative 동작을 자연스럽게 지원한다.  
+- `enum` 기반 route와 명시적 dependency injection으로 타입 안전하고 추적 가능한 구성을 만든다.  
+- SwiftUI는 화면 작성에 집중하고, navigation 제어는 UIKit 엔진에 맡길 수 있다.  
 
-## 핵심 구성
+### 핵심 구성
 
 - `Navigator`
   - push, replace, back, modal, tab 전환을 실행하는 메인 진입점
@@ -32,6 +34,9 @@ SwiftUI로 화면을 만들면서도, 실제 이동 제어는 UIKit stack, tab, 
   - SwiftUI에서 UIKit navigation 엔진을 올리는 bridge
 - `DeepLinkParser`
   - URL을 typed route 기반 deep link로 바꾸는 parser 프로토콜
+
+<br/><br/>
+
 
 ## 현재 상태
 
