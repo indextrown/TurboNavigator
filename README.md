@@ -5,9 +5,10 @@
 # TurboNavigator
 
 `TurboNavigator`는 UIKit navigation controller를 엔진으로 사용하는 typed route 기반 navigation 라이브러리다.  
-SwiftUI 화면 작성은 그대로 활용하면서도, 실제 이동 제어는 UIKit stack, tab, modal 위에서 명시적으로 다룰 수 있게 설계했다.  
+- SwiftUI 화면 작성은 그대로 활용하면서도, 실제 이동 제어는 UIKit stack, tab, modal 위에서 명시적으로 다룰 수 있게 설계했다.  
 
-`LinkNavigator`에서 영감을 받았지만, 문자열 path 중심 구성 대신 `enum` 기반 route, 명시적 dependency injection, route registry 조합으로 더 타입 안전하고 추적 가능한 구조를 목표로 한다.
+- `LinkNavigator`에서 영감을 받았지만, 문자열 path 중심 구성 대신 `enum` 기반 route, 명시적 dependency injection, route registry 조합으로   
+  더 타입 안전하고 추적 가능한 구조를 목표로 한다.
 
 ## 왜 UIKit 엔진 기반인가
 
