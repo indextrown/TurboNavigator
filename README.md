@@ -5,6 +5,7 @@
 
 `TurboNavigator`는 UIKit navigation controller를 엔진으로 사용하는 typed route 기반 navigation 라이브러리다.    
 SwiftUI로 화면을 만들면서도, 실제 이동 제어는 UIKit stack, tab, modal 위에서 명시적으로 다룰 수 있게 설계했다.
+<!-- SwiftUI에서 화면은 선언적으로 구성하되, 실제 이동 제어는 내부 UIKit navigation 엔진을 통해 처리해 복잡한 화면 이동 흐름을 더 명시적이고 일관되게 다룰 수 있도록 설계했다. -->
 
 ## 왜 UIKit 엔진 기반인가
 
@@ -140,7 +141,8 @@ let navigator = Navigator(
   dependencies: AppDependencies(
     userRepository: DefaultUserRepository(),
     analytics: DefaultAnalyticsClient()),
-  registry: registry)
+  registry: registry
+)
 ```
 
 ### 5. SwiftUI에 연결
@@ -151,7 +153,8 @@ let navigator = Navigator(
 NavigationHost(
   navigator: navigator,
   initialRoutes: [.home],
-  prefersLargeTitles: true)
+  prefersLargeTitles: true
+)
 ```
 
 탭 앱:
@@ -168,7 +171,8 @@ TabNavigationHost(
       tag: 1,
       route: .settings,
       tabBarItem: UITabBarItem(title: "Settings", image: nil, tag: 1))
-  ])
+  ]
+)
 ```
 
 ### 6. 화면에서 호출
