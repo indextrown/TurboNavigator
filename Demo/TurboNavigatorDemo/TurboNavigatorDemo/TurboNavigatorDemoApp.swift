@@ -28,12 +28,20 @@ struct TurboNavigatorDemoApp: App {
                 .init(
                   tag: 0,
                   route: .home,
-                  tabBarItem: UITabBarItem(title: "Home", image: nil, tag: 0),
+                  tabBarItem: UITabBarItem(
+                    title: "Home",
+                    image: UIImage(systemName: "house"),
+                    tag: 0
+                  ),
                   prefersLargeTitles: true),
                 .init(
                   tag: 1,
                   route: .settings,
-                  tabBarItem: UITabBarItem(title: "Settings", image: nil, tag: 1),
+                  tabBarItem: UITabBarItem(
+                    title: "Settings",
+                    image: UIImage(systemName: "gearshape"),
+                    tag: 1
+                  ),
                   prefersLargeTitles: true)
               ])
         }
