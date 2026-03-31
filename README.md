@@ -1,10 +1,10 @@
 
-<img width="150%" alt="스크린샷 2026-03-31 오전 3 06 26" src="https://github.com/user-attachments/assets/1a3ad137-e28d-4ed8-8bed-380124982434" />
+<img width="100%" alt="스크린샷 2026-03-31 오전 3 06 26" src="https://github.com/user-attachments/assets/1a3ad137-e28d-4ed8-8bed-380124982434" />
 
 
 # TurboNavigator
 
-`TurboNavigator`는 UIKit navigation controller를 엔진으로 사용하는 typed route 기반 navigation 라이브러리다.
+`TurboNavigator`는 UIKit navigation controller를 엔진으로 사용하는 typed route 기반 navigation 라이브러리다.  
 SwiftUI로 화면을 만들면서도, 실제 이동 제어는 UIKit stack, tab, modal 위에서 명시적으로 다룰 수 있게 설계했다.
 
 ## 왜 UIKit 엔진 기반인가
