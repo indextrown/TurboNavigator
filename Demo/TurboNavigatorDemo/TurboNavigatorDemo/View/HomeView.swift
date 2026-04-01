@@ -9,6 +9,7 @@ import SwiftUI
 import TurboNavigator
 
 struct HomeView: View {
+    @Environment(\.openURL) private var openURL
     let navigator: Navigator<AppDependencies, AppRoute>
     @State private var routeSnapshot = ""
     
@@ -96,9 +97,51 @@ struct HomeView: View {
                 navigator.switchTab(tag: 0, popToRootIfSelected: false)
               }
             }
+
+            section("Deep Link") {
+              demoButton("Open turbonavigator://home") {
+                openURL(URL(string: "turbonavigator://home")!)
+              }
+
+              demoButton("Open turbonavigator://detail?id=42") {
+                openURL(URL(string: "turbonavigator://detail?id=42")!)
+              }
+
+              demoButton("Open turbonavigator://settings") {
+                openURL(URL(string: "turbonavigator://settings")!)
+              }
+
+              demoButton("Open turbonavigator://mvvm") {
+                openURL(URL(string: "turbonavigator://mvvm")!)
+              }
+
+              demoButton("Open stack link: home/detail/settings") {
+                openURL(URL(string: "turbonavigator://dynamic.link/home/detail/settings?id=42")!)
+              }
+
+              demoButton("Open stack link: home/detail/detail/settings") {
+                openURL(URL(string: "turbonavigator://dynamic.link/home/detail/detail/settings?detail1=42&detail2=99")!)
+              }
+
+              Text("Registered URLs")
+                .font(.headline)
+
+              Text("turbonavigator://home")
+                .font(.footnote.monospaced())
+              Text("turbonavigator://detail?id=42")
+                .font(.footnote.monospaced())
+              Text("turbonavigator://settings")
+                .font(.footnote.monospaced())
+              Text("turbonavigator://mvvm")
+                .font(.footnote.monospaced())
+              Text("turbonavigator://dynamic.link/home/detail/settings?id=42")
+                .font(.footnote.monospaced())
+              Text("turbonavigator://dynamic.link/home/detail/detail/settings?detail1=42&detail2=99")
+                .font(.footnote.monospaced())
+                .foregroundStyle(.secondary)
+            }
           }
           .padding()
         }
     }
 }
-

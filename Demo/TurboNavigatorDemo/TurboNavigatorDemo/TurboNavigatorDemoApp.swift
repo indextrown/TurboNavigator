@@ -16,12 +16,6 @@ struct TurboNavigatorDemoApp: App {
     
     var body: some Scene {
         WindowGroup {
-            /*
-            NavigationContainer(
-                navigator: navigator,
-                initialRoutes: [.home]
-            )
-             */
             TabNavigationContainer(
               navigator: navigator,
               items: [
@@ -44,6 +38,9 @@ struct TurboNavigatorDemoApp: App {
                   ),
                   prefersLargeTitles: true)
               ])
+            .onOpenURL { url in
+                navigator.handle(url: url, parser: AppDeepLinkParser())
+            }
         }
     }
 }

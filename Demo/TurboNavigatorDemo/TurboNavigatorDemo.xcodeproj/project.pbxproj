@@ -33,9 +33,22 @@
 		DF364EB12F7950F800E04CC9 /* TurboNavigatorDemoUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = TurboNavigatorDemoUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		DF4C7BA82F7CF3230072A9AA /* Exceptions for "TurboNavigatorDemo" folder in "TurboNavigatorDemo" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = DF364E992F7950F700E04CC9 /* TurboNavigatorDemo */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		DF364E9C2F7950F700E04CC9 /* TurboNavigatorDemo */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				DF4C7BA82F7CF3230072A9AA /* Exceptions for "TurboNavigatorDemo" folder in "TurboNavigatorDemo" target */,
+			);
 			path = TurboNavigatorDemo;
 			sourceTree = "<group>";
 		};
@@ -409,6 +422,8 @@
 				DEVELOPMENT_TEAM = LGX4B4WC66;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = TurboNavigatorDemo/Info.plist;
+				INFOPLIST_KEY_CFBundleURLTypes = "({CFBundleTypeRole=Editor;CFBundleURLName=com.indextrown.TurboNavigatorDemo;CFBundleURLSchemes=(turbonavigator);})";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -437,6 +452,8 @@
 				DEVELOPMENT_TEAM = LGX4B4WC66;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = TurboNavigatorDemo/Info.plist;
+				INFOPLIST_KEY_CFBundleURLTypes = "({CFBundleTypeRole=Editor;CFBundleURLName=com.indextrown.TurboNavigatorDemo;CFBundleURLSchemes=(turbonavigator);})";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
