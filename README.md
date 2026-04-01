@@ -124,6 +124,7 @@ struct AppDependencies {
 ```swift
 let registry = RouteRegistry<AppDependencies, AppRoute>()
   .registering(.home) { context in
+    // UIKit 프로젝트에서는 WrappingController 대신 UIViewController를 직접 반환하면 된다.
     WrappingController(route: context.route, title: "Home") {
       HomeView(navigator: context.navigator)
     }
