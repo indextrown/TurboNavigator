@@ -305,6 +305,46 @@ struct AppDeepLinkParser: DeepLinkParser {
 - modal이 떠 있으면 modal 스택이 현재 활성 스택이 된다.
 - deep link parsing은 앱이 담당하고, navigator는 파싱된 action을 실행한다.
 
+## Architecture
+```mermaid
+flowchart TD
+    A[User Action / DeepLink URL] --> B{Input Type}
+
+    B -->|UI Action| C[Navigator.push / present / replace / switchTab]
+    B -->|DeepLink| D[DeepLinkParser]
+    D --> E[DeepLink]
+    E --> F[Navigator.handle]
+
+    C --> G[Navigator]
+    F --> G
+
+    G --> H{Action Type}
+
+    H -->|push / replace / back| I[SingleStackCoordinator]
+    H -->|present / dismiss| J[ModalCoordinator]
+    H -->|switchTab| K[TabCoordinator]
+
+    G --> L[RouteRegistry]
+    L --> M[RouteBuilder Match]
+    M --> N[RouteContext 생성]
+    N --> O[ViewController 생성]
+
+    O --> P{UI Type}
+    P -->|SwiftUI| Q[WrappingController]
+    P -->|UIKit| R[UIViewController]
+
+    I --> S[UINavigationController Stack 반영]
+    J --> T[Modal Navigation 반영]
+    K --> U[Tab Navigation 반영]
+
+    Q --> S
+    R --> S
+    Q --> T
+    R --> T
+    Q --> U
+    R --> U
+```
+
 <!-- ## 샘플 앱
 
 가장 먼저 보는 걸 추천하는 파일은 아래다.
