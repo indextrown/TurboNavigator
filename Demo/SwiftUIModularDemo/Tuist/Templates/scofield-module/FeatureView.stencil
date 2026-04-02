@@ -1,0 +1,42 @@
+import SwiftUI
+import AppCore
+
+public struct {{ name }}View: View {
+    let navigator: Navigator<AppDependencies, AppRoute>
+
+    public init(navigator: Navigator<AppDependencies, AppRoute>) {
+        self.navigator = navigator
+    }
+
+    public var body: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            Text("{{ name }}")
+                .font(.largeTitle.weight(.bold))
+
+            Text("Scaffolded with the scofield-module Tuist template.")
+                .font(.body)
+                .foregroundStyle(.secondary)
+
+            actionButton("Back") {
+                navigator.back()
+            }
+        }
+        .padding(20)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .background(Color(uiColor: .systemBackground))
+    }
+
+    private func actionButton(_ title: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Text(title)
+                .font(.headline)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 14)
+        }
+        .buttonStyle(.borderedProminent)
+    }
+}
+
+#Preview {
+    {{ name }}View(navigator: .preview)
+}
