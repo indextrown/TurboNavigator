@@ -57,7 +57,7 @@ SwiftUI로 화면을 만들면서도, 실제 이동 제어는 UIKit stack, tab, 
 
 ## 현재 상태
 
-- 구현됨: typed route 기반 `Navigator`, `RouteRegistry`, explicit DI, stack/modal/tab 연산, deep link entry point, SwiftUI bridge, demo app
+- 구현됨: typed route 기반 `Navigator`, `RouteRegistry`, explicit DI, stack/modal/tab 연산, deep link entry point, SwiftUI bridge, preview helper, tab haptic, demo app
 - 후순위: nested modal 일반화, `remove` 계열 연산, deep link parser 기본 구현, state restoration, UIKit-only 예제 확장
 
 ## 설치
@@ -183,12 +183,14 @@ TabNavigationContainer(
     .init(
       tag: 0,
       route: .home,
-      tabBarItem: UITabBarItem(title: "Home", image: nil, tag: 0)),
+      tabBarItem: UITabBarItem(title: "Home", image: nil, tag: 0),
+      hapticStyle: .selection),
     .init(
       tag: 1,
       route: .settings,
       tabBarItem: UITabBarItem(title: "Settings", image: nil, tag: 1))
-  ]
+  ],
+  isTabBarHidden: false
 )
 ```
 
@@ -199,7 +201,17 @@ navigator.push(.detail(id: "42"))
 navigator.present(.settings)
 navigator.presentFullScreen(.settings)
 navigator.back()
+navigator.backTo(.home)
+navigator.backOrPush(.settings)
 navigator.switchTab(tag: 1)
+navigator.currentRoutes()
+```
+
+필요하면 modal 스타일도 직접 지정할 수 있다.
+
+```swift
+navigator.present(.settings, style: .pageSheet)
+navigator.present(.settings, style: .overFullScreen)
 ```
 
 ### 7. Deep Link 연결
@@ -243,9 +255,39 @@ struct AppDeepLinkParser: DeepLinkParser {
 
 - route는 `.home` 같은 고정 case와 `.detail(id:)` 같은 연관값 case를 함께 사용할 수 있다.
 - 외부 의존성은 `Dependencies`로 모으고 builder 안에서는 `context.dependencies`로 접근한다.
-- 고정 route는 `registering(_:)`, 연관값 route는 `registering(extracting:)`로 등록한다.
+- 고정 route는 `registering(_:)`, 연관값 route는 `registering(extracting:)`, 조건 기반 route는 `registering(matching:)`로 등록한다.
+- builder는 `WrappingController`로 SwiftUI 화면을 감쌀 수도 있고, UIKit 프로젝트에서는 `UIViewController`를 직접 반환해도 된다.
+- `WrappingController`는 `title == nil`이면 기본적으로 navigation bar를 숨긴다. 제목 없이 bar를 유지하고 싶으면 `title: ""` 또는 `isNavigationBarHidden: false`를 명시해야 한다.
 - 화면에서는 `UIViewController`를 직접 다루지 않고 `navigator`만 호출하면 된다.
+- `backTo`와 `backOrPush`는 route를 추적할 수 있는 화면에서 동작한다. `WrappingController`를 쓰지 않는 UIKit 화면이라면 `AnyRouteIdentifiable`를 직접 채택해야 한다.
 - deep link는 앱이 URL을 받고 parser가 `DeepLink<Route>`로 바꾼 뒤 `navigator.handle(url:parser:)`로 연결한다.
+
+## Preview 지원
+
+SwiftUI Preview에서 mock navigator를 빠르게 만들 수 있다.
+
+```swift
+#Preview {
+  SampleView(navigator: .preview)
+}
+```
+
+`Dependencies`가 있으면 `PreviewDependencies`를 채택해 기본 preview 값을 줄 수 있다.
+
+```swift
+extension AppDependencies: PreviewDependencies {
+  static var preview: Self {
+    .init(
+      userRepository: MockUserRepository(),
+      analytics: PreviewAnalyticsClient()
+    )
+  }
+}
+
+#Preview {
+  HomeView(navigator: .preview)
+}
+```
 
 ## 도입 체크리스트
 
@@ -269,6 +311,7 @@ struct AppDeepLinkParser: DeepLinkParser {
 - Stack: `push`, `replace`, `back`, `backTo`, `backOrPush`, `currentRoutes`
 - Modal: `present`, `presentFullScreen`, `dismissModal`
 - Tab: `switchTab`
+- State: `isModalActive`
 - Deep Link: `handle(_:)`, `handle(url:parser:)`
 
 ### Stack
@@ -306,6 +349,19 @@ struct AppDeepLinkParser: DeepLinkParser {
 - modal은 한 번에 한 계층만 유지하고, 새 modal은 기존 modal을 교체한다.
 - modal이 떠 있으면 modal 스택이 현재 활성 스택이 된다.
 - deep link parsing은 앱이 담당하고, navigator는 파싱된 action을 실행한다.
+
+## DeepLink 직접 실행
+
+URL parser 없이 `DeepLink<Route>`를 직접 만들어 실행할 수도 있다.
+
+```swift
+let deepLink = DeepLink(
+  routes: [.home, .detail(id: "42")],
+  action: .push
+)
+
+navigator.handle(deepLink)
+```
 
 ## Architecture
 ```mermaid
