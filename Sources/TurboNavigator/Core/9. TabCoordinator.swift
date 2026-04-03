@@ -122,8 +122,8 @@ public final class TabCoordinator<Dependencies, Route: Hashable> {
         if tabBarController.selectedViewController === controller {
             currentTag = tag
             if popToRootIfSelected {
-                if let rootViewController = controller.viewControllers.first {
-                    controller.setViewControllers([rootViewController], animated: false)
+                if controller.viewControllers.count > 1 {
+                    controller.popToRootViewController(animated: false)
                 }
             }
             return
