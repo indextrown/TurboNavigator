@@ -89,6 +89,7 @@ public struct ModalCoordinator<Dependencies, Route: Hashable> {
         
         // navigation stack 구성
         modalController.setViewControllers(viewControllers, animated: false)
+        modalController.applyNavigationBarVisibility(for: viewControllers.first)
         
         // modal 표시
         presenter.present(modalController, animated: animated)

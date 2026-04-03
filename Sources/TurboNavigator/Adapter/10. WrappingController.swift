@@ -8,6 +8,19 @@
 import SwiftUI
 
 
+public protocol NavigationBarConfigurable {
+    var prefersNavigationBarHidden: Bool { get }
+}
+
+
+extension UINavigationController {
+    func applyNavigationBarVisibility(for viewController: UIViewController?) {
+        guard let configurable = viewController as? NavigationBarConfigurable else { return }
+        setNavigationBarHidden(configurable.prefersNavigationBarHidden, animated: false)
+    }
+}
+
+
 /// SwiftUI View를 UIKit 기반 네비게이션 시스템에서 사용할 수 있도록
 /// 감싸는 UIHostingController 래퍼 컨트롤러
 ///
@@ -29,7 +42,7 @@ import SwiftUI
 ///   `anyRoute`를 사용합니다 (Type Erasure)
 public final class WrappingController<
     Route: Hashable, Content: View
->: UIHostingController<Content>, AnyRouteIdentifiable {
+>: UIHostingController<Content>, AnyRouteIdentifiable, NavigationBarConfigurable {
     
     /// 해당 ViewController를 생성한 Route
     public let route: Route
@@ -40,6 +53,9 @@ public final class WrappingController<
     /// - Note:
     ///   다양한 Route 타입을 하나의 타입으로 비교하기 위해 사용
     public let anyRoute: AnyHashable
+
+    /// 현재 화면에서 NavigationBar를 숨길지 여부
+    public let prefersNavigationBarHidden: Bool
     
     
     /// SwiftUI View를 감싸는 WrappingController 생성자
@@ -54,14 +70,21 @@ public final class WrappingController<
     public init(
         route: Route,
         title: String? = nil,
+        isNavigationBarHidden: Bool? = nil,
         @ViewBuilder content: () -> Content
     ) {
         self.route = route
         self.anyRoute = AnyHashable(route)
+        self.prefersNavigationBarHidden = isNavigationBarHidden ?? (title == nil)
         
         super.init(rootView: content())
         
         self.title = title
+    }
+
+    public override func viewWillAppear(_ animated: Bool) {
+        super.viewWillAppear(animated)
+        navigationController?.setNavigationBarHidden(prefersNavigationBarHidden, animated: animated)
     }
     
     /// Storyboard / XIB 초기화는 지원하지 않음

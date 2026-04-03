@@ -72,12 +72,11 @@ public struct NavigationContainer<Dependencies, Route: Hashable>: UIViewControll
     public func makeUIViewController(context: Context) -> UINavigationController {
         let controller = UINavigationController()
         controller.navigationBar.prefersLargeTitles = prefersLargeTitles
+        let viewControllers = navigator.launch(initialRoutes)
         
         // 초기 화면 구성
-        controller.setViewControllers(
-            navigator.launch(initialRoutes),
-            animated: false
-        )
+        controller.setViewControllers(viewControllers, animated: false)
+        controller.applyNavigationBarVisibility(for: viewControllers.first)
         
         // Navigator와 연결
         navigator.rootController = controller

@@ -86,13 +86,13 @@ public final class TabCoordinator<Dependencies, Route: Hashable> {
             controller.navigationBar.prefersLargeTitles = item.prefersLargeTitles
             controller.tabBarItem = item.tabBarItem
             
-            controller.setViewControllers(
-                navigator.registry.build(
-                    routes: [item.route],
-                    navigator: navigator,
-                    dependencies: navigator.dependencies),
-                animated: false
+            let viewControllers = navigator.registry.build(
+                routes: [item.route],
+                navigator: navigator,
+                dependencies: navigator.dependencies
             )
+            controller.setViewControllers(viewControllers, animated: false)
+            controller.applyNavigationBarVisibility(for: viewControllers.first)
             
             tabCoordinators[item.tag] = controller
             return controller
