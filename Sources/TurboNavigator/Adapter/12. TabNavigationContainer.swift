@@ -130,7 +130,7 @@ public struct TabNavigationContainer<
     public final class Coordinator: NSObject, UITabBarControllerDelegate {
         public var items: [TabNavigationItem<Route>]
         private let navigator: Navigator<Dependencies, Route>
-        private let feedbackGenerator = UISelectionFeedbackGenerator()
+        private let selectionFeedbackGenerator = UISelectionFeedbackGenerator()
         
         init(
             items: [TabNavigationItem<Route>],
@@ -142,7 +142,7 @@ public struct TabNavigationContainer<
         
         func attach(to controller: UITabBarController) {
             controller.delegate = self
-            feedbackGenerator.prepare()
+            selectionFeedbackGenerator.prepare()
         }
         
         public func tabBarController(
@@ -160,9 +160,28 @@ public struct TabNavigationContainer<
             let item = items[selectedIndex]
             navigator.tabCoordinator.setSelectedTag(item.tag)
             
-            if item.isHapticFeedbackEnabled {
-                feedbackGenerator.selectionChanged()
-                feedbackGenerator.prepare()
+            if let hapticStyle = item.hapticStyle {
+                triggerHaptic(for: hapticStyle)
+            }
+        }
+        
+        private func triggerHaptic(for style: TabHapticStyle) {
+            switch style {
+            case .selection:
+                selectionFeedbackGenerator.selectionChanged()
+                selectionFeedbackGenerator.prepare()
+            case .light:
+                let generator = UIImpactFeedbackGenerator(style: .light)
+                generator.prepare()
+                generator.impactOccurred()
+            case .medium:
+                let generator = UIImpactFeedbackGenerator(style: .medium)
+                generator.prepare()
+                generator.impactOccurred()
+            case .heavy:
+                let generator = UIImpactFeedbackGenerator(style: .heavy)
+                generator.prepare()
+                generator.impactOccurred()
             }
         }
     }
@@ -197,7 +216,7 @@ public struct TabNavigationContainer<
            route: .home,
            tabBarItem: UITabBarItem(title: "Home", image: nil, tag: 0),
            prefersLargeTitles: true,
-           isHapticFeedbackEnabled: true
+           hapticStyle: .medium
          ),
          .init(
            tag: 1,
