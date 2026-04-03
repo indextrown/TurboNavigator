@@ -12,16 +12,19 @@ public struct TabNavigationItem<Route: Hashable> {
     public let route: Route                 /// 이 탭을 선택하면 어떤 화면(route)로 갈지
     public let tabBarItem: UITabBarItem?    /// UI
     public let prefersLargeTitles: Bool     /// 타이틀 크기 설정
+    public let isHapticFeedbackEnabled: Bool /// 탭 선택 시 햅틱 여부
     
     public init(
         tag: Int,
         route: Route,
         tabBarItem: UITabBarItem? = nil,
-        prefersLargeTitles: Bool = false
+        prefersLargeTitles: Bool = false,
+        isHapticFeedbackEnabled: Bool = false
     ) {
         self.tag = tag
         self.route = route
         self.tabBarItem = tabBarItem
         self.prefersLargeTitles = prefersLargeTitles
+        self.isHapticFeedbackEnabled = isHapticFeedbackEnabled
     }
 }

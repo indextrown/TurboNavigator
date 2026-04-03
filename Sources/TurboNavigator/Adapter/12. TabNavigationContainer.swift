@@ -61,6 +61,10 @@ public struct TabNavigationContainer<
         self.isTabBarHidden = isTabBarHidden
     }
     
+    public func makeCoordinator() -> Coordinator {
+        Coordinator(items: items, navigator: navigator)
+    }
+    
     
     /// UITabBarController 생성 및 초기 탭 구성
     ///
@@ -76,6 +80,8 @@ public struct TabNavigationContainer<
     ///   6. Navigator와 연결
     public func makeUIViewController(context: Context) -> UITabBarController {
         let controller = UITabBarController()
+        context.coordinator.items = items
+        context.coordinator.attach(to: controller)
         
         // 각 탭별 navigation stack 생성
         let navigationControllers = navigator.tabCoordinator.launch(
@@ -106,6 +112,7 @@ public struct TabNavigationContainer<
         
         // 최신 controller 연결
         navigator.tabCoordinator.tabBarController = uiViewController
+        context.coordinator.items = items
         
         // 현재 선택된 탭 index -> tag 동기화
         if let selectedIndex = uiViewController.viewControllers?.firstIndex(where: {
@@ -118,6 +125,46 @@ public struct TabNavigationContainer<
         
         // TabBar 표시 여부 업데이트
         uiViewController.tabBar.isHidden = isTabBarHidden
+    }
+    
+    public final class Coordinator: NSObject, UITabBarControllerDelegate {
+        public var items: [TabNavigationItem<Route>]
+        private let navigator: Navigator<Dependencies, Route>
+        private let feedbackGenerator = UISelectionFeedbackGenerator()
+        
+        init(
+            items: [TabNavigationItem<Route>],
+            navigator: Navigator<Dependencies, Route>
+        ) {
+            self.items = items
+            self.navigator = navigator
+        }
+        
+        func attach(to controller: UITabBarController) {
+            controller.delegate = self
+            feedbackGenerator.prepare()
+        }
+        
+        public func tabBarController(
+            _ tabBarController: UITabBarController,
+            didSelect viewController: UIViewController
+        ) {
+            guard let selectedIndex = tabBarController.viewControllers?.firstIndex(where: {
+                $0 === viewController
+            }),
+            selectedIndex < items.count
+            else {
+                return
+            }
+            
+            let item = items[selectedIndex]
+            navigator.tabCoordinator.setSelectedTag(item.tag)
+            
+            if item.isHapticFeedbackEnabled {
+                feedbackGenerator.selectionChanged()
+                feedbackGenerator.prepare()
+            }
+        }
     }
 }
 
@@ -149,7 +196,8 @@ public struct TabNavigationContainer<
            tag: 0,
            route: .home,
            tabBarItem: UITabBarItem(title: "Home", image: nil, tag: 0),
-           prefersLargeTitles: true
+           prefersLargeTitles: true,
+           isHapticFeedbackEnabled: true
          ),
          .init(
            tag: 1,
@@ -161,7 +209,7 @@ public struct TabNavigationContainer<
            tag: 2,
            route: .profile,
            tabBarItem: UITabBarItem(title: "Profile", image: nil, tag: 2),
-           prefersLargeTitles: false
+            prefersLargeTitles: false
          )
        ]
      )
