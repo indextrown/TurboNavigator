@@ -79,7 +79,11 @@ enum AppRouter {
                     return title
                 },
                 build: { context, title in
-                    WrappingController(route: context.route, title: title) {
+                    WrappingController(
+                        route: context.route,
+                        title: title,
+                        isTabBarHiddenWhenPushed: true
+                    ) {
                         DetailView(navigator: context.navigator, title: title)
                     }
                 }

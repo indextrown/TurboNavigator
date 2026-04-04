@@ -56,12 +56,17 @@ public final class WrappingController<
 
     /// 현재 화면에서 NavigationBar를 숨길지 여부
     public let prefersNavigationBarHidden: Bool
+
+    /// 현재 화면이 push 되었을 때 TabBar를 숨길지 여부
+    public let prefersTabBarHiddenWhenPushed: Bool
     
     
     /// SwiftUI View를 감싸는 WrappingController 생성자
     /// - Parameters:
     ///   - route: 현재 화면의 Route
     ///   - title: NavigationBar에 표시할 제목
+    ///   - isNavigationBarHidden: NavigationBar 숨김 여부
+    ///   - isTabBarHiddenWhenPushed: push 시 TabBar 숨김 여부
     ///   - content: 표시할 SwiftUI View
     ///
     /// - Important:
@@ -71,15 +76,18 @@ public final class WrappingController<
         route: Route,
         title: String? = nil,
         isNavigationBarHidden: Bool? = nil,
+        isTabBarHiddenWhenPushed: Bool = false,
         @ViewBuilder content: () -> Content
     ) {
         self.route = route
         self.anyRoute = AnyHashable(route)
         self.prefersNavigationBarHidden = isNavigationBarHidden ?? (title == nil)
+        self.prefersTabBarHiddenWhenPushed = isTabBarHiddenWhenPushed
         
         super.init(rootView: content())
         
         self.title = title
+        self.hidesBottomBarWhenPushed = isTabBarHiddenWhenPushed
     }
 
     public override func viewDidLoad() {
@@ -134,7 +142,8 @@ public final class WrappingController<
  // MARK: - WrappingController 생성
  let vc = WrappingController(
    route: AppRoute.detail(id: "42"),
-   title: "Detail"
+   title: "Detail",
+   isTabBarHiddenWhenPushed: true
  ) {
    DetailView(id: "42")
  }
