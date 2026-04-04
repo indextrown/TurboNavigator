@@ -83,6 +83,7 @@ public final class TabCoordinator<Dependencies, Route: Hashable> {
         
         let controllers = items.map { item -> UINavigationController in
             let controller = UINavigationController()
+            controller.view.backgroundColor = .clear
             controller.navigationBar.prefersLargeTitles = item.prefersLargeTitles
             controller.tabBarItem = item.tabBarItem
             

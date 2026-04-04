@@ -80,6 +80,7 @@ public struct TabNavigationContainer<
     ///   6. Navigator와 연결
     public func makeUIViewController(context: Context) -> UITabBarController {
         let controller = UITabBarController()
+        controller.view.backgroundColor = .clear
         context.coordinator.items = items
         context.coordinator.attach(to: controller)
         

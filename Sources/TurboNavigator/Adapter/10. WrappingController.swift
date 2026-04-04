@@ -82,9 +82,28 @@ public final class WrappingController<
         self.title = title
     }
 
+    public override func viewDidLoad() {
+        super.viewDidLoad()
+
+        // Keep the hosting container transparent so tab switches do not briefly
+        // reveal UIKit's default background before SwiftUI redraws.
+        view.backgroundColor = .clear
+        view.isOpaque = false
+    }
+
     public override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
-        navigationController?.setNavigationBarHidden(prefersNavigationBarHidden, animated: animated)
+
+        guard let navigationController else { return }
+
+        // Reapplying the same navigation-bar visibility on every tab switch can
+        // cause subtle safe-area/list inset relayouts, which feels like the
+        // screen "jumps" when a tab becomes active again.
+        guard navigationController.isNavigationBarHidden != prefersNavigationBarHidden else {
+            return
+        }
+
+        navigationController.setNavigationBarHidden(prefersNavigationBarHidden, animated: false)
     }
     
     /// Storyboard / XIB 초기화는 지원하지 않음
