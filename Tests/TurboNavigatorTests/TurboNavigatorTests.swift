@@ -1,4 +1,5 @@
 import UIKit
+import SwiftUI
 import XCTest
 @testable import TurboNavigator
 
@@ -182,6 +183,23 @@ final class TurboNavigatorTests: XCTestCase {
         /// then
         XCTAssertNotNil(built)
         XCTAssertEqual((built as? AssociatedTestViewController)?.extractedId, "42")
+    }
+
+    func test_wrappingController가_appearance시_navigation_title을_복원한다() {
+        let controller = WrappingController(route: TestRoute.home, title: "Home") {
+            Text("Home")
+        }
+        let navigationController = UINavigationController(rootViewController: controller)
+
+        controller.loadViewIfNeeded()
+        controller.navigationItem.title = nil
+        controller.title = nil
+
+        controller.viewWillAppear(false)
+
+        XCTAssertEqual(controller.navigationItem.title, "Home")
+        XCTAssertEqual(controller.title, "Home")
+        XCTAssertTrue(navigationController.viewControllers.first === controller)
     }
     
     // push

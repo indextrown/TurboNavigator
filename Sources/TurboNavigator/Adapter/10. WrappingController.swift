@@ -57,6 +57,9 @@ public final class WrappingController<
     /// 현재 화면에서 NavigationBar를 숨길지 여부
     public let prefersNavigationBarHidden: Bool
 
+    /// 탭 전환이나 UIKit relayout 이후에도 복원할 navigation title
+    public let preferredNavigationTitle: String?
+
     /// 현재 화면이 push 되었을 때 TabBar를 숨길지 여부
     public let prefersTabBarHiddenWhenPushed: Bool
     
@@ -82,11 +85,13 @@ public final class WrappingController<
         self.route = route
         self.anyRoute = AnyHashable(route)
         self.prefersNavigationBarHidden = isNavigationBarHidden ?? (title == nil)
+        self.preferredNavigationTitle = title
         self.prefersTabBarHiddenWhenPushed = isTabBarHiddenWhenPushed
         
         super.init(rootView: content())
         
         self.title = title
+        self.navigationItem.title = title
         self.hidesBottomBarWhenPushed = isTabBarHiddenWhenPushed
     }
 
@@ -101,6 +106,15 @@ public final class WrappingController<
 
     public override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
+
+        // UIKit can occasionally drop the visible title while swapping between
+        // tab-hosted navigation stacks, so restore the intended title eagerly.
+        if navigationItem.title != preferredNavigationTitle {
+            navigationItem.title = preferredNavigationTitle
+        }
+        if title != preferredNavigationTitle {
+            title = preferredNavigationTitle
+        }
 
         guard let navigationController else { return }
 
