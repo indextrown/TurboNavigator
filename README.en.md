@@ -52,11 +52,28 @@ It lets you build screens with SwiftUI while keeping actual navigation control e
 - `DeepLinkParser`
   - Protocol that converts a URL into a typed route-based deep link
 
+### Easy-to-miss features
+
+- Multi-route push/present
+  - You can build flows like `push([.home, .detail(id: "42")])` or `present([.login, .terms])` in one call.
+- Route-aware stack control
+  - `backTo`, `backOrPush`, and `currentRoutes` let you reason about the stack in route terms instead of raw view controllers.
+- Per-tab configuration
+  - Each `TabNavigationItem` can define its own `prefersLargeTitles` and `hapticStyle`.
+- Tab UX controls
+  - Supports pop-to-root on tab reselect, `isTabBarHidden`, and opting out of the iOS 18 system tab transition animation.
+- WrappingController controls
+  - `title`, `isNavigationBarHidden`, and `isTabBarHiddenWhenPushed` let you tune navigation-bar and tab-bar behavior per screen.
+- Modal state cleanup
+  - Interactive sheet dismissals also clear internal modal state so stale modal references do not linger.
+- Preview helpers
+  - `Navigator.preview` and `PreviewDependencies` make SwiftUI previews easier to wire up with mock navigation.
+
 <br/><br/>
 
 ## Current status
 
-- Implemented: typed route-based `Navigator`, `RouteRegistry`, explicit DI, stack/modal/tab operations, deep link entry point, SwiftUI bridge, demo app
+- Implemented: typed route-based `Navigator`, `RouteRegistry`, explicit DI, stack/modal/tab operations, deep link entry point, SwiftUI bridge, tab haptics, iOS 18 system tab transition animation opt-out, demo app
 - Lower priority: generalized nested modal handling, `remove`-style operations, default deep link parser implementation, state restoration, expanded UIKit-only examples
 
 ## Installation
@@ -183,12 +200,16 @@ TabNavigationContainer(
     .init(
       tag: 0,
       route: .home,
-      tabBarItem: UITabBarItem(title: "Home", image: nil, tag: 0)),
+      tabBarItem: UITabBarItem(title: "Home", image: nil, tag: 0),
+      prefersLargeTitles: true,
+      hapticStyle: .selection),
     .init(
       tag: 1,
       route: .settings,
-      tabBarItem: UITabBarItem(title: "Settings", image: nil, tag: 1))
-  ]
+      tabBarItem: UITabBarItem(title: "Settings", image: nil, tag: 1),
+      prefersLargeTitles: false)
+  ],
+  disablesSystemTabTransitionAnimation: true
 )
 ```
 
@@ -198,8 +219,12 @@ TabNavigationContainer(
 navigator.push(.detail(id: "42"))
 navigator.present(.settings)
 navigator.presentFullScreen(.settings)
+navigator.present(.settings, style: .pageSheet)
 navigator.back()
+navigator.backTo(.home)
+navigator.backOrPush(.settings)
 navigator.switchTab(tag: 1)
+navigator.currentRoutes()
 ```
 
 ### 7. Hook up deep links
@@ -244,6 +269,7 @@ Example URLs:
 - Routes can mix fixed cases like `.home` with associated-value cases like `.detail(id:)`.
 - Gather external dependencies in `Dependencies`, then access them inside builders through `context.dependencies`.
 - Register fixed routes with `registering(_:)` and associated-value routes with `registering(extracting:)`.
+- Set `disablesSystemTabTransitionAnimation` on `TabNavigationContainer` to `true` if you want to opt out of the iOS 18 system tab transition animation. The same setting applies to both tab-bar taps and `navigator.switchTab(tag:)`.
 - Screens do not need to manipulate `UIViewController` directly; they can just call `navigator`.
 - For deep links, the app receives the URL, the parser converts it into `DeepLink<Route>`, and `navigator.handle(url:parser:)` executes it.
 

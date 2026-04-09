@@ -43,6 +43,9 @@ public struct TabNavigationContainer<
     
     /// TabBar 숨김 여부
     public let isTabBarHidden: Bool
+
+    /// iOS 18의 기본 탭 전환 애니메이션 비활성화 여부
+    public let disablesSystemTabTransitionAnimation: Bool
     
     
     /// TabNavigationContainer 생성자
@@ -51,18 +54,25 @@ public struct TabNavigationContainer<
     ///   - navigator: Navigator 인스턴스
     ///   - items: 탭 구성 정보 배열
     ///   - isTabBarHidden: TabBar 숨김 여부 (기본값: false)
+    ///   - disablesSystemTabTransitionAnimation: iOS 18 기본 탭 전환 애니메이션 비활성화 여부 (기본값: false)
     public init(
         navigator: Navigator<Dependencies, Route>,
         items: [TabNavigationItem<Route>],
-        isTabBarHidden: Bool = false
+        isTabBarHidden: Bool = false,
+        disablesSystemTabTransitionAnimation: Bool = false
     ) {
         self.navigator = navigator
         self.items = items
         self.isTabBarHidden = isTabBarHidden
+        self.disablesSystemTabTransitionAnimation = disablesSystemTabTransitionAnimation
     }
     
     public func makeCoordinator() -> Coordinator {
-        Coordinator(items: items, navigator: navigator)
+        Coordinator(
+            items: items,
+            navigator: navigator,
+            disablesSystemTabTransitionAnimation: disablesSystemTabTransitionAnimation
+        )
     }
     
     
@@ -81,7 +91,9 @@ public struct TabNavigationContainer<
     public func makeUIViewController(context: Context) -> UITabBarController {
         let controller = UITabBarController()
         controller.view.backgroundColor = .clear
+        navigator.tabCoordinator.disablesSystemTabTransitionAnimation = disablesSystemTabTransitionAnimation
         context.coordinator.items = items
+        context.coordinator.disablesSystemTabTransitionAnimation = disablesSystemTabTransitionAnimation
         context.coordinator.attach(to: controller)
         
         // 각 탭별 navigation stack 생성
@@ -113,7 +125,9 @@ public struct TabNavigationContainer<
         
         // 최신 controller 연결
         navigator.tabCoordinator.tabBarController = uiViewController
+        navigator.tabCoordinator.disablesSystemTabTransitionAnimation = disablesSystemTabTransitionAnimation
         context.coordinator.items = items
+        context.coordinator.disablesSystemTabTransitionAnimation = disablesSystemTabTransitionAnimation
         
         // 현재 선택된 탭 index -> tag 동기화
         if let selectedIndex = uiViewController.viewControllers?.firstIndex(where: {
@@ -130,15 +144,18 @@ public struct TabNavigationContainer<
     
     public final class Coordinator: NSObject, UITabBarControllerDelegate {
         public var items: [TabNavigationItem<Route>]
+        public var disablesSystemTabTransitionAnimation: Bool
         private let navigator: Navigator<Dependencies, Route>
         private let selectionFeedbackGenerator = UISelectionFeedbackGenerator()
         
         init(
             items: [TabNavigationItem<Route>],
-            navigator: Navigator<Dependencies, Route>
+            navigator: Navigator<Dependencies, Route>,
+            disablesSystemTabTransitionAnimation: Bool
         ) {
             self.items = items
             self.navigator = navigator
+            self.disablesSystemTabTransitionAnimation = disablesSystemTabTransitionAnimation
         }
         
         func attach(to controller: UITabBarController) {
@@ -146,6 +163,29 @@ public struct TabNavigationContainer<
             selectionFeedbackGenerator.prepare()
         }
         
+        public func tabBarController(
+            _ tabBarController: UITabBarController,
+            shouldSelect viewController: UIViewController
+        ) -> Bool {
+            guard disablesSystemTabTransitionAnimation,
+                  #available(iOS 18.0, *),
+                  let fromView = tabBarController.selectedViewController?.view,
+                  let toView = viewController.view,
+                  fromView !== toView
+            else {
+                return true
+            }
+
+            UIView.transition(
+                from: fromView,
+                to: toView,
+                duration: 0,
+                options: [.transitionCrossDissolve]
+            )
+
+            return true
+        }
+
         public func tabBarController(
             _ tabBarController: UITabBarController,
             didSelect viewController: UIViewController

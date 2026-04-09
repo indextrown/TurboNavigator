@@ -8,6 +8,21 @@
 import UIKit
 
 
+private extension UITabBarController {
+    func setSelectedViewControllerWithoutSystemTransition(_ viewController: UIViewController) {
+        guard #available(iOS 18.0, *) else {
+            selectedViewController = viewController
+            return
+        }
+
+        let wereAnimationsEnabled = UIView.areAnimationsEnabled
+        UIView.setAnimationsEnabled(false)
+        selectedViewController = viewController
+        UIView.setAnimationsEnabled(wereAnimationsEnabled)
+    }
+}
+
+
 /// Tab 기반 네비게이션을 관리하는 Coordinator
 /// 
 /// - Note:
@@ -36,6 +51,9 @@ public final class TabCoordinator<Dependencies, Route: Hashable> {
     
     /// 현재 선택된 탭의 tag
     public private(set) var currentTag: Int?
+
+    /// iOS 18의 기본 탭 전환 애니메이션을 비활성화할지 여부
+    public var disablesSystemTabTransitionAnimation = false
     
     public init() {}
     
@@ -132,7 +150,11 @@ public final class TabCoordinator<Dependencies, Route: Hashable> {
         
         /// 다음 탭으로 전환
         currentTag = tag
-        tabBarController.selectedViewController = controller
+        if disablesSystemTabTransitionAnimation {
+            tabBarController.setSelectedViewControllerWithoutSystemTransition(controller)
+        } else {
+            tabBarController.selectedViewController = controller
+        }
     }
     
     

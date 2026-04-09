@@ -52,12 +52,29 @@ SwiftUI로 화면을 만들면서도, 실제 이동 제어는 UIKit stack, tab, 
 - `DeepLinkParser`
   - URL을 typed route 기반 deep link로 바꾸는 parser 프로토콜
 
+### 놓치기 쉬운 기능
+
+- 다중 route push/present
+  - `push([.home, .detail(id: "42")])`, `present([.login, .terms])`처럼 한 번에 여러 화면을 구성할 수 있다.
+- route 기반 되돌아가기
+  - `backTo`, `backOrPush`, `currentRoutes`로 현재 스택을 route 단위로 다룰 수 있다.
+- 탭별 설정
+  - `TabNavigationItem`마다 `prefersLargeTitles`, `hapticStyle`을 다르게 줄 수 있다.
+- 탭 UX 제어
+  - 같은 탭 재선택 시 root 복귀, `isTabBarHidden`, iOS 18 기본 탭 전환 애니메이션 비활성화를 지원한다.
+- WrappingController 세부 제어
+  - `title`, `isNavigationBarHidden`, `isTabBarHiddenWhenPushed`로 네비게이션 바와 탭 바 표시를 화면 단위로 조절할 수 있다.
+- modal 안정성
+  - sheet를 스와이프로 닫은 경우도 내부 modal 상태를 정리해 stale 참조가 남지 않도록 처리한다.
+- preview helper
+  - `Navigator.preview`와 `PreviewDependencies`로 SwiftUI Preview에서 mock navigator를 빠르게 만들 수 있다.
+
 <br/><br/>
 
 
 ## 현재 상태
 
-- 구현됨: typed route 기반 `Navigator`, `RouteRegistry`, explicit DI, stack/modal/tab 연산, deep link entry point, SwiftUI bridge, preview helper, tab haptic, demo app
+- 구현됨: typed route 기반 `Navigator`, `RouteRegistry`, explicit DI, stack/modal/tab 연산, deep link entry point, SwiftUI bridge, preview helper, tab haptic, iOS 18 탭 전환 애니메이션 비활성화 옵션, demo app
 - 후순위: nested modal 일반화, `remove` 계열 연산, deep link parser 기본 구현, state restoration, UIKit-only 예제 확장
 
 ## 설치
@@ -184,13 +201,16 @@ TabNavigationContainer(
       tag: 0,
       route: .home,
       tabBarItem: UITabBarItem(title: "Home", image: nil, tag: 0),
+      prefersLargeTitles: true,
       hapticStyle: .selection),
     .init(
       tag: 1,
       route: .settings,
-      tabBarItem: UITabBarItem(title: "Settings", image: nil, tag: 1))
+      tabBarItem: UITabBarItem(title: "Settings", image: nil, tag: 1),
+      prefersLargeTitles: false)
   ],
-  isTabBarHidden: false
+  isTabBarHidden: false,
+  disablesSystemTabTransitionAnimation: true
 )
 ```
 
@@ -200,6 +220,7 @@ TabNavigationContainer(
 navigator.push(.detail(id: "42"))
 navigator.present(.settings)
 navigator.presentFullScreen(.settings)
+navigator.present(.settings, style: .pageSheet)
 navigator.back()
 navigator.backTo(.home)
 navigator.backOrPush(.settings)
@@ -258,6 +279,7 @@ struct AppDeepLinkParser: DeepLinkParser {
 - 고정 route는 `registering(_:)`, 연관값 route는 `registering(extracting:)`, 조건 기반 route는 `registering(matching:)`로 등록한다.
 - builder는 `WrappingController`로 SwiftUI 화면을 감쌀 수도 있고, UIKit 프로젝트에서는 `UIViewController`를 직접 반환해도 된다.
 - `WrappingController`는 `title == nil`이면 기본적으로 navigation bar를 숨긴다. 제목 없이 bar를 유지하고 싶으면 `title: ""` 또는 `isNavigationBarHidden: false`를 명시해야 한다.
+- `TabNavigationContainer`의 `disablesSystemTabTransitionAnimation`을 `true`로 주면 iOS 18 이상에서 기본 탭 전환 애니메이션을 끌 수 있다. 탭바 직접 탭 전환과 `navigator.switchTab(tag:)` 둘 다 같은 설정을 따른다.
 - 화면에서는 `UIViewController`를 직접 다루지 않고 `navigator`만 호출하면 된다.
 - `backTo`와 `backOrPush`는 route를 추적할 수 있는 화면에서 동작한다. `WrappingController`를 쓰지 않는 UIKit 화면이라면 `AnyRouteIdentifiable`를 직접 채택해야 한다.
 - deep link는 앱이 URL을 받고 parser가 `DeepLink<Route>`로 바꾼 뒤 `navigator.handle(url:parser:)`로 연결한다.
