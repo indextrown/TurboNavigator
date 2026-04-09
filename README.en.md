@@ -97,7 +97,7 @@ Add it directly from `Package.swift`:
 
 ```swift
 dependencies: [
-  .package(url: "https://github.com/indextrown/TurboNavigator.git", from: "1.0.0")
+  .package(url: "https://github.com/indextrown/TurboNavigator.git", from: "1.1.1")
 ]
 ```
 
@@ -111,7 +111,7 @@ targets: [
 ]
 ```
 
-For the public repository, use `https://github.com/indextrown/TurboNavigator.git` with `from: "1.0.0"`.
+For the public repository, use `https://github.com/indextrown/TurboNavigator.git` with `from: "1.1.1"`.
 If you are developing the app and package together locally, the local package option is the fastest.
 
 ## Quick Start

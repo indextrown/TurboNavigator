@@ -98,7 +98,7 @@ Xcode:
 
 ```swift
 dependencies: [
-  .package(url: "https://github.com/indextrown/TurboNavigator.git", from: "1.0.0")
+  .package(url: "https://github.com/indextrown/TurboNavigator.git", from: "1.1.1")
 ]
 ```
 
@@ -112,7 +112,7 @@ targets: [
 ]
 ```
 
-공개 저장소를 기준으로 붙일 때는 `https://github.com/indextrown/TurboNavigator.git`와 `from: "1.0.0"` 조합을 사용하면 된다.
+공개 저장소를 기준으로 붙일 때는 `https://github.com/indextrown/TurboNavigator.git`와 `from: "1.1.1"` 조합을 사용하면 된다.
 로컬에서 같이 개발 중이면 로컬 패키지 방식이 가장 빠르다.
 
 ## 빠른 시작
