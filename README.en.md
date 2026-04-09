@@ -30,6 +30,27 @@ It lets you build screens with SwiftUI while keeping actual navigation control e
 
 `TurboNavigator` addresses that gap by letting SwiftUI focus on screens while UIKit remains the navigation engine.
 
+More concretely, it is designed for cases where `NavigationStack` alone is either awkward or too indirect to control consistently.
+
+- When you need to override system transition behavior
+  - Example: opting out of the iOS 18 system tab transition animation requires control at the `UITabBarController` / `UINavigationController` layer.
+- When you need to replace or rebuild the root stack itself
+  - Example: swapping from an auth flow to the main app flow after login, or rebuilding the stack as `[.home, .detail(id: ...)]` when opening from a deep link.
+- When the active stack changes at runtime
+  - Example: the app may need the same `push` / `back` / `replace` call to target the root stack, a tab stack, or a modal stack depending on what is currently visible.
+- When route-based imperative control matters
+  - Example: flows like `backTo`, `backOrPush`, or checking `currentRoutes()` are simpler when a UIKit stack is the underlying source of truth.
+- When SwiftUI and UIKit need to coexist
+  - Example: some screens may still be existing `UIViewController`s while newer screens are written in SwiftUI, but both should use the same navigator API.
+- When one action needs to build multiple screens in sequence
+  - Example: after onboarding, you may want to push `[.home, .promotion, .detail(id: ...)]` in one go, or present a modal stack that already contains multiple routes.
+- When routes, not view instances, should be the source of truth
+  - Example: it can be more useful to inspect, compare, and restore the current stack as a route array than to reason in raw `UIViewController` references.
+- When tab, modal, and stack flows need one imperative surface
+  - Example: rules like “push onto the modal if one is active, otherwise push onto the currently selected tab stack” are easier to centralize in a navigator layer.
+- When you want navigation state decoupled from SwiftUI view state
+  - Example: screens can simply fire `navigator` actions while the actual transition policy stays in a dedicated control layer instead of being embedded in view state updates.
+
 ### Strengths
 
 - Unifies `stack`, `tab`, `modal`, and `deep link` flows behind one `Navigator` API.

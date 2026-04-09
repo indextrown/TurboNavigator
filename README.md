@@ -30,6 +30,27 @@ SwiftUI로 화면을 만들면서도, 실제 이동 제어는 UIKit stack, tab, 
 
 `TurboNavigator`는 이 지점을 해결하기 위해 화면은 SwiftUI로 만들고, 실제 navigation 엔진은 UIKit으로 두었다.
 
+특히 아래처럼 `NavigationStack`만으로는 다루기 까다롭거나 일관되게 통제하기 어려운 요구를 염두에 두고 설계했다.
+
+- 시스템 전환 동작을 제어해야 할 때
+  - 예: iOS 18의 기본 탭 전환 애니메이션을 끄고 싶을 때처럼 `UITabBarController`, `UINavigationController` 레벨의 동작 제어가 필요할 수 있다.
+- 현재 루트 스택 자체를 교체하거나 재구성해야 할 때
+  - 예: 로그인 완료 후 auth 플로우를 버리고 메인 플로우로 갈아타기, deep link 진입 시 `[.home, .detail(id: ...)]`처럼 스택을 새로 구성하기.
+- 어느 스택이 현재 활성 대상인지 런타임에 바뀌는 앱일 때
+  - 예: root stack, tab stack, modal stack 중 어디에 push / back / replace를 적용해야 하는지 호출부가 직접 알지 않도록 하고 싶을 수 있다.
+- route 기준으로 imperative 제어가 필요할 때
+  - 예: 특정 화면이 있으면 `backTo`, 없으면 `backOrPush`, 현재 stack을 `currentRoutes()`로 점검하는 흐름은 UIKit stack을 직접 다루는 쪽이 단순하다.
+- SwiftUI와 UIKit을 섞어 써야 할 때
+  - 예: 일부 화면은 SwiftUI, 일부는 기존 `UIViewController`인 앱에서도 같은 navigator API를 유지하고 싶을 수 있다.
+- 한 액션으로 여러 화면을 연속 구성해야 할 때
+  - 예: onboarding 종료 후 `[.home, .promotion, .detail(id: ...)]`를 한 번에 쌓거나, modal 안에 여러 route를 미리 구성해 진입하고 싶을 수 있다.
+- 화면 인스턴스보다 route를 source of truth로 두고 싶을 때
+  - 예: 현재 스택을 `UIViewController` 참조가 아니라 route 배열 관점에서 읽고, 비교하고, 복원하는 흐름이 더 중요할 수 있다.
+- 탭, 모달, 스택을 섞은 imperative 플로우를 한 API로 유지하고 싶을 때
+  - 예: “현재 modal이 떠 있으면 modal에 push, 아니면 현재 선택된 tab stack에 push” 같은 규칙을 화면 코드가 직접 풀지 않게 만들고 싶을 수 있다.
+- SwiftUI 기본 네비게이션 상태와 화면 생명주기를 느슨하게 결합하고 싶을 때
+  - 예: View state 갱신과 navigation state 변화를 분리해서, 화면은 단순히 `navigator` 액션만 호출하고 실제 전환은 별도 계층에서 통제하고 싶을 수 있다.
+
 ### 강점
 
 - `stack`, `tab`, `modal`, `deep link`를 하나의 `Navigator` API로 통합한다.
