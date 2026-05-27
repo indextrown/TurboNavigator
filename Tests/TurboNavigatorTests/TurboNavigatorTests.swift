@@ -123,6 +123,21 @@ private final class PresenterNavigationController: UINavigationController {
     }
 }
 
+private final class TrackingNavigationController: UINavigationController {
+    private(set) var pushCallCount = 0
+    private(set) var setViewControllersCallCount = 0
+
+    override func pushViewController(_ viewController: UIViewController, animated: Bool) {
+        pushCallCount += 1
+        super.pushViewController(viewController, animated: animated)
+    }
+
+    override func setViewControllers(_ viewControllers: [UIViewController], animated: Bool) {
+        setViewControllersCallCount += 1
+        super.setViewControllers(viewControllers, animated: animated)
+    }
+}
+
 final class TurboNavigatorTests: XCTestCase {
     
     // route
@@ -242,6 +257,93 @@ final class TurboNavigatorTests: XCTestCase {
         /// then
         XCTAssertEqual(rootController.viewControllers.count, 2)
         XCTAssertEqual((rootController.viewControllers.last as? TestViewController)?.route, TestRoute.detail)
+    }
+
+    func test_단일_route_push는_pushViewController를_사용한다() {
+
+        /// given
+        let registry = RouteRegistry<Void, TestRoute>()
+            .registering(TestRoute.home) { context in
+                TestViewController(route: context.route)
+            }
+            .registering(TestRoute.detail) { context in
+                TestViewController(route: context.route)
+            }
+
+        let navigator = Navigator<Void, TestRoute>(
+            dependencies: (),
+            registry: registry
+        )
+
+        let rootController = TrackingNavigationController()
+        rootController.setViewControllers(navigator.launch([TestRoute.home]), animated: false)
+        navigator.rootController = rootController
+
+        /// when
+        navigator.push(TestRoute.detail, animated: false)
+
+        /// then
+        XCTAssertEqual(rootController.pushCallCount, 1)
+        XCTAssertEqual(rootController.setViewControllersCallCount, 1)
+        XCTAssertEqual((rootController.viewControllers.last as? TestViewController)?.route, TestRoute.detail)
+    }
+
+    func test_여러_route_push는_setViewControllers를_한_번_사용한다() {
+
+        /// given
+        let registry = RouteRegistry<Void, TestRoute>()
+            .registering(TestRoute.home) { context in
+                TestViewController(route: context.route)
+            }
+            .registering(TestRoute.detail) { context in
+                TestViewController(route: context.route)
+            }
+            .registering(TestRoute.settings) { context in
+                TestViewController(route: context.route)
+            }
+
+        let navigator = Navigator<Void, TestRoute>(
+            dependencies: (),
+            registry: registry
+        )
+
+        let rootController = TrackingNavigationController()
+        rootController.setViewControllers(navigator.launch([TestRoute.home]), animated: false)
+        navigator.rootController = rootController
+
+        /// when
+        navigator.push([TestRoute.detail, TestRoute.settings], animated: false)
+
+        /// then
+        XCTAssertEqual(rootController.pushCallCount, 0)
+        XCTAssertEqual(rootController.setViewControllersCallCount, 2)
+        XCTAssertEqual(rootController.viewControllers.count, 3)
+        XCTAssertEqual((rootController.viewControllers.last as? TestViewController)?.route, TestRoute.settings)
+    }
+
+    func test_활성_controller가_없으면_stack_작업은_route를_build하지_않는다() {
+
+        /// given
+        var buildCallCount = 0
+
+        let registry = RouteRegistry<Void, TestRoute>()
+            .registering(TestRoute.home) { context in
+                buildCallCount += 1
+                return TestViewController(route: context.route)
+            }
+
+        let navigator = Navigator<Void, TestRoute>(
+            dependencies: (),
+            registry: registry
+        )
+
+        /// when
+        navigator.push(TestRoute.home, animated: false)
+        navigator.replace(with: [TestRoute.home], animated: false)
+        navigator.backOrPush(TestRoute.home, animated: false)
+
+        /// then
+        XCTAssertEqual(buildCallCount, 0)
     }
     
     func test_등록되지_않은_route를_push하면_stack이_변하지_않는다() {
@@ -378,6 +480,66 @@ final class TurboNavigatorTests: XCTestCase {
         /// then
         XCTAssertFalse(navigator.isModalActive)
         XCTAssertEqual(rootController.presentCallCount, 0)
+    }
+
+    func test_presentationController가_없으면_present는_route를_build하지_않는다() {
+
+        /// given
+        var buildCallCount = 0
+
+        let registry = RouteRegistry<Void, TestRoute>()
+            .registering(TestRoute.settings) { context in
+                buildCallCount += 1
+                return TestViewController(route: context.route)
+            }
+
+        let navigator = Navigator<Void, TestRoute>(
+            dependencies: (),
+            registry: registry,
+            modalCoordinator: ModalCoordinator(makeNavigationController: { PresenterNavigationController() })
+        )
+
+        /// when
+        navigator.present(TestRoute.settings, animated: false)
+
+        /// then
+        XCTAssertFalse(navigator.isModalActive)
+        XCTAssertEqual(buildCallCount, 0)
+    }
+
+    func test_ModalCoordinator는_presenter가_없으면_route를_build하지_않는다() {
+
+        /// given
+        var buildCallCount = 0
+
+        let registry = RouteRegistry<Void, TestRoute>()
+            .registering(TestRoute.settings) { context in
+                buildCallCount += 1
+                return TestViewController(route: context.route)
+            }
+
+        let navigator = Navigator<Void, TestRoute>(
+            dependencies: (),
+            registry: registry
+        )
+
+        let modalCoordinator = ModalCoordinator<Void, TestRoute>(
+            makeNavigationController: { PresenterNavigationController() }
+        )
+
+        /// when
+        let modalController = modalCoordinator.present(
+            routes: [TestRoute.settings],
+            from: nil,
+            existingModalController: nil,
+            navigator: navigator,
+            animated: false,
+            presentationStyle: .automatic
+        )
+
+        /// then
+        XCTAssertNil(modalController)
+        XCTAssertEqual(buildCallCount, 0)
     }
     
     func test_presentFullScreen은_fullScreen_스타일을_적용한다() {

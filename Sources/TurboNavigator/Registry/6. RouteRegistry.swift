@@ -125,13 +125,22 @@ public struct RouteRegistry<Dependencies, Route: Hashable> {
         navigator: Navigator<Dependencies, Route>,
         dependencies: Dependencies
     ) -> [UIViewController] {
-        return routes.compactMap {
-            build(
-                route: $0,
+        var viewControllers: [UIViewController] = []
+        viewControllers.reserveCapacity(routes.count)
+
+        for route in routes {
+            guard let viewController = build(
+                route: route,
                 navigator: navigator,
                 dependencies: dependencies
-            )
+            ) else {
+                continue
+            }
+
+            viewControllers.append(viewController)
         }
+
+        return viewControllers
     }
 }
 

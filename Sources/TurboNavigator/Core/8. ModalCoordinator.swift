@@ -70,15 +70,12 @@ public struct ModalCoordinator<Dependencies, Route: Hashable> {
         animated: Bool,
         presentationStyle: ModalPresentationStyle
     ) -> UINavigationController? {
+        guard let presenter else { return existingModalController }
         
         // Route -> ViewController 변환
-        let viewControllers = navigator.registry.build(
-            routes: routes,
-            navigator: navigator,
-            dependencies: navigator.dependencies
-        )
+        let viewControllers = navigator.launch(routes)
 
-        guard let presenter, !viewControllers.isEmpty else {
+        guard !viewControllers.isEmpty else {
             return existingModalController
         }
 

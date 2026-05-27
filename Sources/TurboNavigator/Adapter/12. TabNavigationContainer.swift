@@ -7,7 +7,7 @@
 
 import SwiftUI
 
-private struct TabNavigationItemIdentity<Route: Hashable>: Equatable {
+fileprivate struct TabNavigationItemIdentity<Route: Hashable>: Equatable {
     let tag: Int
     let route: Route
 
@@ -103,6 +103,7 @@ public struct TabNavigationContainer<
         controller.view.backgroundColor = .clear
         navigator.tabCoordinator.disablesSystemTabTransitionAnimation = disablesSystemTabTransitionAnimation
         context.coordinator.items = items
+        context.coordinator.itemIdentities = items.map(TabNavigationItemIdentity.init)
         context.coordinator.disablesSystemTabTransitionAnimation = disablesSystemTabTransitionAnimation
         context.coordinator.attach(to: controller)
         
@@ -140,12 +141,12 @@ public struct TabNavigationContainer<
         navigator.tabCoordinator.disablesSystemTabTransitionAnimation = disablesSystemTabTransitionAnimation
         context.coordinator.disablesSystemTabTransitionAnimation = disablesSystemTabTransitionAnimation
 
-        let previousIdentity = context.coordinator.items.map(TabNavigationItemIdentity.init)
         let nextIdentity = items.map(TabNavigationItemIdentity.init)
-        let shouldRebuildTabs = previousIdentity != nextIdentity
+        let shouldRebuildTabs = context.coordinator.itemIdentities != nextIdentity
             || (uiViewController.viewControllers?.count ?? 0) != items.count
 
         context.coordinator.items = items
+        context.coordinator.itemIdentities = nextIdentity
 
         if shouldRebuildTabs {
             let selectedTag = navigator.tabCoordinator.currentTag
@@ -178,11 +179,8 @@ public struct TabNavigationContainer<
         }
         
         // 현재 선택된 탭 index -> tag 동기화
-        if let selectedIndex = uiViewController.viewControllers?.firstIndex(where: {
-            $0 === uiViewController.selectedViewController
-        }),
-           selectedIndex < items.count
-        {
+        let selectedIndex = uiViewController.selectedIndex
+        if selectedIndex >= 0, selectedIndex < items.count {
             navigator.tabCoordinator.setSelectedTag(items[selectedIndex].tag)
         }
         
@@ -192,6 +190,7 @@ public struct TabNavigationContainer<
     
     public final class Coordinator: NSObject, UITabBarControllerDelegate {
         public var items: [TabNavigationItem<Route>]
+        fileprivate var itemIdentities: [TabNavigationItemIdentity<Route>]
         public var disablesSystemTabTransitionAnimation: Bool
         private let navigator: Navigator<Dependencies, Route>
         private let selectionFeedbackGenerator = UISelectionFeedbackGenerator()
@@ -202,6 +201,7 @@ public struct TabNavigationContainer<
             disablesSystemTabTransitionAnimation: Bool
         ) {
             self.items = items
+            self.itemIdentities = items.map(TabNavigationItemIdentity.init)
             self.navigator = navigator
             self.disablesSystemTabTransitionAnimation = disablesSystemTabTransitionAnimation
         }

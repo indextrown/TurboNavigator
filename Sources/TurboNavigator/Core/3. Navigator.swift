@@ -142,6 +142,8 @@ extension Navigator {
         _ routes: [Route],
         animated: Bool = true
     ) {
+        guard let activeController else { return }
+
         let newControllers = registry.build(
             routes: routes,
             navigator: self,
@@ -177,6 +179,8 @@ extension Navigator {
         with routes: [Route],
         animated: Bool = true
     ) {
+        guard let activeController else { return }
+
         let newControllers = registry.build(
             routes: routes,
             navigator: self,
@@ -255,16 +259,27 @@ extension Navigator {
         _ route: Route,
         animated: Bool = true
     ) {
-        guard let activeController,
-              let target = singleStackCoordinator.lastMatchedViewController(
-                route: route,
-                in: activeController
-              ) else {
-            push(route, animated: animated)
+        guard let activeController else { return }
+
+        if let target = singleStackCoordinator.lastMatchedViewController(
+            route: route,
+            in: activeController
+        ) {
+            activeController.popToViewController(target, animated: animated)
             return
         }
-        
-        activeController.popToViewController(target, animated: animated)
+
+        guard let viewController = registry.build(
+            route: route,
+            navigator: self,
+            dependencies: dependencies
+        ) else { return }
+
+        singleStackCoordinator.append(
+            viewControllers: [viewController],
+            to: activeController,
+            animated: animated
+        )
     }
 }
 
@@ -282,6 +297,8 @@ extension Navigator {
         animated: Bool = true,
         style: ModalPresentationStyle = .automatic
     ) {
+        guard let presentationController else { return }
+
         guard let newModalController = modalCoordinator.present(
             routes: routes,
             from: presentationController,

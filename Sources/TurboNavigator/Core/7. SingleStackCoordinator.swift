@@ -47,7 +47,8 @@ public struct SingleStackCoordinator<Route: Hashable> {
     ///   - animated: 애니메이션 여부
     ///
     /// 내부 동작:
-    /// - 기존 스택 + 새로운 VC를 합쳐서 setViewControllers 호출
+    /// - 단일 VC는 pushViewController 호출
+    /// - 여러 VC는 기존 스택 + 새로운 VC를 합쳐서 setViewControllers 호출
     public func append(
         viewControllers: [UIViewController],
         to controller: UINavigationController?,
@@ -55,6 +56,17 @@ public struct SingleStackCoordinator<Route: Hashable> {
     ) {
         guard let controller else { return }
         guard !viewControllers.isEmpty else { return }
+
+        guard viewControllers.count > 1 else {
+            guard let viewController = viewControllers.first else { return }
+
+            if controller.viewControllers.isEmpty {
+                controller.setViewControllers([viewController], animated: animated)
+            } else {
+                controller.pushViewController(viewController, animated: animated)
+            }
+            return
+        }
         
         controller.setViewControllers(
             controller.viewControllers + viewControllers,
