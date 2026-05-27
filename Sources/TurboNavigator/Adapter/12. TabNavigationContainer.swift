@@ -7,6 +7,16 @@
 
 import SwiftUI
 
+private struct TabNavigationItemIdentity<Route: Hashable>: Equatable {
+    let tag: Int
+    let route: Route
+
+    init(_ item: TabNavigationItem<Route>) {
+        self.tag = item.tag
+        self.route = item.route
+    }
+}
+
 /// SwiftUI 환경에서 Tab 기반 UIKit 네비게이션을 사용할 수 있도록 연결하는 브릿지.
 ///
 /// - 역할:
@@ -103,7 +113,9 @@ public struct TabNavigationContainer<
         )
         
         controller.setViewControllers(navigationControllers, animated: false)
-        controller.selectedIndex = 0
+        if !navigationControllers.isEmpty {
+            controller.selectedIndex = 0
+        }
         controller.tabBar.isHidden = isTabBarHidden
         
         // Navigator와 연결
@@ -126,8 +138,44 @@ public struct TabNavigationContainer<
         // 최신 controller 연결
         navigator.tabCoordinator.tabBarController = uiViewController
         navigator.tabCoordinator.disablesSystemTabTransitionAnimation = disablesSystemTabTransitionAnimation
-        context.coordinator.items = items
         context.coordinator.disablesSystemTabTransitionAnimation = disablesSystemTabTransitionAnimation
+
+        let previousIdentity = context.coordinator.items.map(TabNavigationItemIdentity.init)
+        let nextIdentity = items.map(TabNavigationItemIdentity.init)
+        let shouldRebuildTabs = previousIdentity != nextIdentity
+            || (uiViewController.viewControllers?.count ?? 0) != items.count
+
+        context.coordinator.items = items
+
+        if shouldRebuildTabs {
+            let selectedTag = navigator.tabCoordinator.currentTag
+            let navigationControllers = navigator.tabCoordinator.launch(
+                items: items,
+                navigator: navigator
+            )
+
+            uiViewController.setViewControllers(navigationControllers, animated: false)
+
+            if let selectedTag,
+               let selectedIndex = items.firstIndex(where: { $0.tag == selectedTag }) {
+                uiViewController.selectedIndex = selectedIndex
+                navigator.tabCoordinator.setSelectedTag(selectedTag)
+            } else if !items.isEmpty {
+                uiViewController.selectedIndex = 0
+                navigator.tabCoordinator.setSelectedTag(items[0].tag)
+            } else {
+                navigator.tabCoordinator.setSelectedTag(nil)
+            }
+        } else {
+            for (index, item) in items.enumerated() {
+                guard let controller = uiViewController.viewControllers?[index] as? UINavigationController else {
+                    continue
+                }
+
+                controller.navigationBar.prefersLargeTitles = item.prefersLargeTitles
+                controller.tabBarItem = item.tabBarItem
+            }
+        }
         
         // 현재 선택된 탭 index -> tag 동기화
         if let selectedIndex = uiViewController.viewControllers?.firstIndex(where: {

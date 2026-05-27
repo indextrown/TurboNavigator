@@ -71,28 +71,35 @@ public struct ModalCoordinator<Dependencies, Route: Hashable> {
         presentationStyle: ModalPresentationStyle
     ) -> UINavigationController? {
         
-        guard let presenter else { return nil }
-        
-        // 기존 modal 제거
-        existingModalController?.dismiss(animated: animated)
-        
-        // 새로운 modal navigation 생성
-        let modalController = makeNavigationController()
-        modalController.modalPresentationStyle = presentationStyle.uiKitStyle
-        
         // Route -> ViewController 변환
         let viewControllers = navigator.registry.build(
             routes: routes,
             navigator: navigator,
             dependencies: navigator.dependencies
         )
+
+        guard let presenter, !viewControllers.isEmpty else {
+            return existingModalController
+        }
+
+        // 새로운 modal navigation 생성
+        let modalController = makeNavigationController()
+        modalController.modalPresentationStyle = presentationStyle.uiKitStyle
         
         // navigation stack 구성
         modalController.setViewControllers(viewControllers, animated: false)
         modalController.applyNavigationBarVisibility(for: viewControllers.first)
-        
-        // modal 표시
-        presenter.present(modalController, animated: animated)
+
+        let presentModal = {
+            presenter.present(modalController, animated: animated)
+        }
+
+        if let existingModalController {
+            existingModalController.dismiss(animated: animated, completion: presentModal)
+        } else {
+            presentModal()
+        }
+
         return modalController
     }
     

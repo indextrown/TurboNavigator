@@ -184,6 +184,36 @@ final class TurboNavigatorTests: XCTestCase {
         XCTAssertEqual((built as? AssociatedTestViewController)?.extractedId, "42")
     }
 
+    func test_extracting_builder는_build_시_extract를_한_번만_호출한다() {
+
+        /// given
+        var extractCallCount = 0
+
+        let registry = RouteRegistry<Void, AssociatedRoute>()
+            .registering { route in
+                extractCallCount += 1
+                guard case let AssociatedRoute.detail(id) = route else { return nil }
+                return id
+            } build: { context, id in
+                AssociatedTestViewController(route: context.route, extractedId: id)
+            }
+
+        let navigator = Navigator<Void, AssociatedRoute>(
+            dependencies: (),
+            registry: registry
+        )
+
+        /// when
+        _ = registry.build(
+            route: AssociatedRoute.detail(id: "42"),
+            navigator: navigator,
+            dependencies: ()
+        )
+
+        /// then
+        XCTAssertEqual(extractCallCount, 1)
+    }
+
     // push
     func test_push를_호출하면_root_stack에_컨트롤러가_추가된다() {
         
@@ -297,6 +327,57 @@ final class TurboNavigatorTests: XCTestCase {
         XCTAssertFalse(firstModal === secondModal)
         XCTAssertEqual(firstModal?.dismissCallCount, 1)
         XCTAssertEqual(rootController.presentCallCount, 2)
+    }
+
+    func test_present는_build된_컨트롤러가_없으면_기존_모달을_유지한다() {
+
+        /// given
+        let registry = RouteRegistry<Void, TestRoute>()
+            .registering(TestRoute.home) { context in
+                TestViewController(route: context.route)
+            }
+
+        let navigator = Navigator<Void, TestRoute>(
+            dependencies: (),
+            registry: registry,
+            modalCoordinator: ModalCoordinator(makeNavigationController: { PresenterNavigationController() })
+        )
+
+        let rootController = PresenterNavigationController()
+        navigator.rootController = rootController
+
+        navigator.present(TestRoute.home, animated: false)
+        let firstModal = navigator.modalController as? PresenterNavigationController
+
+        /// when
+        navigator.present(TestRoute.missing, animated: false)
+
+        /// then
+        XCTAssertTrue(navigator.modalController === firstModal)
+        XCTAssertEqual(firstModal?.dismissCallCount, 0)
+        XCTAssertEqual(rootController.presentCallCount, 1)
+    }
+
+    func test_present는_빈_routes이면_모달을_띄우지_않는다() {
+
+        /// given
+        let registry = RouteRegistry<Void, TestRoute>()
+
+        let navigator = Navigator<Void, TestRoute>(
+            dependencies: (),
+            registry: registry,
+            modalCoordinator: ModalCoordinator(makeNavigationController: { PresenterNavigationController() })
+        )
+
+        let rootController = PresenterNavigationController()
+        navigator.rootController = rootController
+
+        /// when
+        navigator.present([], animated: false)
+
+        /// then
+        XCTAssertFalse(navigator.isModalActive)
+        XCTAssertEqual(rootController.presentCallCount, 0)
     }
     
     func test_presentFullScreen은_fullScreen_스타일을_적용한다() {

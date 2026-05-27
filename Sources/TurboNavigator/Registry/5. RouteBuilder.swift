@@ -33,6 +33,8 @@ public struct RouteBuilder<Dependencies, Route: Hashable> {
     /// - Parameter context: Navigator, Route, Dependencies를 포함한 컨텍스트
     /// - Returns: 생성된 ViewController (또는 nil)
     public let build: (RouteContext<Dependencies, Route>) -> RouteViewController?
+
+    let resolve: (RouteContext<Dependencies, Route>) -> (matched: Bool, viewController: RouteViewController?)
     
     
     /// RouteBuilder 생성자
@@ -46,6 +48,20 @@ public struct RouteBuilder<Dependencies, Route: Hashable> {
     ) {
         self.matches = matches
         self.build = build
+        self.resolve = { context in
+            guard matches(context.route) else { return (false, nil) }
+            return (true, build(context))
+        }
+    }
+
+    private init(
+        matches: @escaping (Route) -> Bool,
+        build: @escaping (RouteContext<Dependencies, Route>) -> RouteViewController?,
+        resolve: @escaping (RouteContext<Dependencies, Route>) -> (matched: Bool, viewController: RouteViewController?)
+    ) {
+        self.matches = matches
+        self.build = build
+        self.resolve = resolve
     }
 }
 
@@ -90,6 +106,10 @@ extension RouteBuilder {
             build: { context in
                 guard let value = extract(context.route) else { return nil }
                 return build(context, value)
+            },
+            resolve: { context in
+                guard let value = extract(context.route) else { return (false, nil) }
+                return (true, build(context, value))
             }
         )
     }

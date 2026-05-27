@@ -56,15 +56,10 @@ public struct SingleStackCoordinator<Route: Hashable> {
         guard let controller else { return }
         guard !viewControllers.isEmpty else { return }
         
-        if controller.viewControllers.isEmpty {
-            controller.setViewControllers(viewControllers, animated: animated)
-            return
-        }
-        
-        for (index, viewController) in viewControllers.enumerated() {
-            let shouldAnimate = animated && index == viewControllers.count - 1
-            controller.pushViewController(viewController, animated: shouldAnimate)
-        }
+        controller.setViewControllers(
+            controller.viewControllers + viewControllers,
+            animated: animated
+        )
     }
     
     

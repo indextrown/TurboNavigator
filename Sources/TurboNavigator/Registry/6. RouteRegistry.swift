@@ -102,9 +102,14 @@ public struct RouteRegistry<Dependencies, Route: Hashable> {
             dependencies: dependencies
         )
         
-        return builders
-            .first(where: { $0.matches(route) })?
-            .build(context)
+        for builder in builders {
+            let result = builder.resolve(context)
+            if result.matched {
+                return result.viewController
+            }
+        }
+
+        return nil
     }
     
     
