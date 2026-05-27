@@ -87,6 +87,8 @@ SwiftUI로 화면을 만들면서도, 실제 이동 제어는 UIKit stack, tab, 
   - `title`, `isNavigationBarHidden`, `isTabBarHiddenWhenPushed`로 네비게이션 바와 탭 바 표시를 화면 단위로 조절할 수 있다.
 - modal 안정성
   - sheet를 스와이프로 닫은 경우도 내부 modal 상태를 정리해 stale 참조가 남지 않도록 처리한다.
+- debug stack dump
+  - `debugSnapshot`, `debugStackDescription`, `printStacks`로 root/tab/modal stack 상태를 확인할 수 있다.
 - preview helper
   - `Navigator.preview`와 `PreviewDependencies`로 SwiftUI Preview에서 mock navigator를 빠르게 만들 수 있다.
 
@@ -305,6 +307,67 @@ struct AppDeepLinkParser: DeepLinkParser {
 - `backTo`와 `backOrPush`는 route를 추적할 수 있는 화면에서 동작한다. `WrappingController`를 쓰지 않는 UIKit 화면이라면 `AnyRouteIdentifiable`를 직접 채택해야 한다.
 - deep link는 앱이 URL을 받고 parser가 `DeepLink<Route>`로 바꾼 뒤 `navigator.handle(url:parser:)`로 연결한다.
 
+## Debug 지원
+
+개발 중 현재 navigation 상태를 route 기준으로 확인할 수 있다.
+
+```swift
+let snapshot = navigator.debugSnapshot()
+
+print(snapshot.activeTarget)
+print(snapshot.rootRoutes)
+print(snapshot.tabRoutes)
+print(snapshot.modalRoutes)
+```
+
+콘솔용 문자열 dump도 제공한다.
+
+```swift
+navigator.printStacks()
+```
+
+출력 예:
+
+```text
+TurboNavigator Stack Dump
+Active: modal
+
+Root: [home, detail]
+Tabs:
+  [0]: [home]
+  [1]: [settings]
+Modal: [login, terms]
+```
+
+SwiftUI 화면 위에 간단한 overlay로 표시할 수도 있다.
+
+```swift
+NavigationContainer(
+  navigator: navigator,
+  initialRoutes: [.home]
+)
+.turboNavigatorDebugOverlay(navigator)
+```
+
+탭 기반 화면에서도 동일하게 사용할 수 있다.
+
+```swift
+TabNavigationContainer(
+  navigator: navigator,
+  items: items
+)
+.turboNavigatorDebugOverlay(navigator)
+```
+
+필요하면 refresh 주기를 조정할 수 있다.
+
+```swift
+.turboNavigatorDebugOverlay(
+  navigator,
+  refreshInterval: 1.0
+)
+```
+
 ## Preview 지원
 
 SwiftUI Preview에서 mock navigator를 빠르게 만들 수 있다.
@@ -348,6 +411,7 @@ extension AppDependencies: PreviewDependencies {
 - `B`: 등록된 `RouteBuilder` 개수
 - `S`: 현재 활성 `UINavigationController` stack 길이
 - `R`: 한 번에 전달한 route 개수
+- `T`: tab 개수
 - `P`: 앱이 구현한 parser 비용
 - `A`: 파싱된 action 실행 비용
 
@@ -356,6 +420,7 @@ extension AppDependencies: PreviewDependencies {
 - Tab: `switchTab`
 - State: `isModalActive`
 - Deep Link: `handle(_:)`, `handle(url:parser:)`
+- Debug: `debugSnapshot`, `debugStackDescription`, `printStacks`
 
 ### Stack
 
@@ -385,6 +450,12 @@ extension AppDependencies: PreviewDependencies {
 
 - `handle(_ deepLink:)`: deep link action에 따라 `push`, `replace`, `present` 비용을 그대로 따른다.
 - `handle(url:parser:)`: `O(P + A)`
+
+### Debug
+
+- `debugSnapshot()`: `O(S + T * S)`
+- `debugStackDescription()`: `O(S + T * S)`
+- `printStacks()`: `O(S + T * S)`
 
 정책:
 

@@ -690,6 +690,93 @@ final class TurboNavigatorTests: XCTestCase {
         XCTAssertEqual((rootController.viewControllers.last as? TestViewController)?.route, TestRoute.detail)
     }
     
-    // tab
+    // debug
+    func test_debugSnapshot은_root_tab_modal_stack을_반환한다() {
+
+        /// given
+        let registry = RouteRegistry<Void, TestRoute>()
+            .registering(TestRoute.home) { context in
+                TestViewController(route: context.route)
+            }
+            .registering(TestRoute.detail) { context in
+                TestViewController(route: context.route)
+            }
+            .registering(TestRoute.settings) { context in
+                TestViewController(route: context.route)
+            }
+
+        let navigator = Navigator<Void, TestRoute>(
+            dependencies: (),
+            registry: registry,
+            modalCoordinator: ModalCoordinator(makeNavigationController: { PresenterNavigationController() })
+        )
+
+        let rootController = PresenterNavigationController()
+        rootController.setViewControllers(navigator.launch([TestRoute.home, TestRoute.detail]), animated: false)
+        navigator.rootController = rootController
+
+        _ = navigator.tabCoordinator.launch(
+            items: [
+                .init(tag: 0, route: TestRoute.home),
+                .init(tag: 1, route: TestRoute.settings)
+            ],
+            navigator: navigator
+        )
+
+        navigator.present(TestRoute.settings, animated: false)
+
+        /// when
+        let snapshot = navigator.debugSnapshot()
+
+        /// then
+        XCTAssertEqual(snapshot.activeTarget, .modal)
+        XCTAssertEqual(snapshot.rootRoutes, [AnyHashable(TestRoute.home), AnyHashable(TestRoute.detail)])
+        XCTAssertEqual(snapshot.tabRoutes[0], [AnyHashable(TestRoute.home)])
+        XCTAssertEqual(snapshot.tabRoutes[1], [AnyHashable(TestRoute.settings)])
+        XCTAssertEqual(snapshot.modalRoutes, [AnyHashable(TestRoute.settings)])
+    }
+
+    func test_debugStackDescription은_stack_dump_문자열을_반환한다() {
+
+        /// given
+        let registry = RouteRegistry<Void, TestRoute>()
+            .registering(TestRoute.home) { context in
+                TestViewController(route: context.route)
+            }
+            .registering(TestRoute.detail) { context in
+                TestViewController(route: context.route)
+            }
+            .registering(TestRoute.settings) { context in
+                TestViewController(route: context.route)
+            }
+
+        let navigator = Navigator<Void, TestRoute>(
+            dependencies: (),
+            registry: registry
+        )
+
+        let rootController = UINavigationController()
+        rootController.setViewControllers(navigator.launch([TestRoute.home, TestRoute.detail]), animated: false)
+        navigator.rootController = rootController
+
+        _ = navigator.tabCoordinator.launch(
+            items: [
+                .init(tag: 0, route: TestRoute.home),
+                .init(tag: 1, route: TestRoute.settings)
+            ],
+            navigator: navigator
+        )
+
+        /// when
+        let description = navigator.debugStackDescription()
+
+        /// then
+        XCTAssertTrue(description.contains("TurboNavigator Stack Dump"))
+        XCTAssertTrue(description.contains("Active: tab(0)"))
+        XCTAssertTrue(description.contains("Root: [home, detail]"))
+        XCTAssertTrue(description.contains("[0]: [home]"))
+        XCTAssertTrue(description.contains("[1]: [settings]"))
+        XCTAssertTrue(description.contains("Modal: []"))
+    }
     
 }
