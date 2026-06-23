@@ -10,8 +10,19 @@
 
 # TurboNavigator
 
-`TurboNavigator` is a typed route-based navigation library powered by `UINavigationController`.
-It lets you build screens with SwiftUI while keeping actual navigation control explicit on top of UIKit stack, tab, and modal flows.
+`TurboNavigator` is a typed route-based navigation library that runs SwiftUI screens on top of UIKit `UINavigationController` / `UITabBarController`.
+
+You build screens with SwiftUI, but drive navigation through `enum` routes and `Navigator` commands.
+In other words, SwiftUI remains the UI layer while stack, tab, modal, and deep link flows are controlled explicitly from one place.
+
+## Why TurboNavigator?
+
+- It makes SwiftUI screens and UIKit `UIViewController` screens easier to operate in one navigation flow.
+- It exposes one `Navigator` interface for push, sheet, full-screen modal, tab switching, and stack replacement.
+- It lets internal app actions and external deep links resolve into the same typed route flow.
+- It gives WebView links, push notifications, universal links, custom schemes, and other internal/external entry points a consistent handling path.
+- It provides link-handling utilities so an in-app link can open a specific screen, and an external deep link can be converted into an internal navigation action.
+- Ultimately, it lets the app manage “which link or event opens which screen” from one place, whether the request starts inside the app, outside the app, or inside a WebView.
 
 ## Platform
 
@@ -21,35 +32,31 @@ It lets you build screens with SwiftUI while keeping actual navigation control e
 
 ## Why a UIKit-powered engine?
 
-`NavigationStack` is great for declarative path modeling, but it becomes awkward when you want to manage the kinds of flows real apps often need from one place.
+`NavigationStack` is a good fit when a single stack can be represented as a declarative path. But once navigation becomes a transition policy rather than just view state, it becomes awkward to manage the flows real apps often need from one place.
 
-- You constantly need to care about whether a push should happen on the root stack, a tab stack, or above a modal.
-- Imperative controls like `backTo`, `backOrPush`, `replace`, or returning to root when reselecting the same tab tend to get scattered across the app.
-- `stack`, `tab`, `modal`, and `deep link` flows often end up with different calling conventions, making them harder to treat as one system.
-- Even when screens are written cleanly in SwiftUI, complex screen transitions usually still need a separate control layer.
+### Where SwiftUI NavigationStack gets awkward
+
+- Call sites can easily end up caring whether a push should target the root stack, a tab stack, or a stack above a modal.
+- Imperative controls like `backTo`, `backOrPush`, `replace`, or returning to root when reselecting the same tab tend to become scattered path-array mutations or screen-level code.
+- `NavigationStack`, `TabView`, `sheet`, `fullScreenCover`, and deep links all use different state models and calling conventions, making them hard to treat as one transition system.
+- Even when screens are written cleanly in SwiftUI, complex screen transitions often still need a separate control layer.
+- Navigation-bar / tab-bar visibility, tab transition animation, interactive dismiss cleanup, and existing `UIViewController` reuse are often simpler at the UIKit controller layer.
 
 `TurboNavigator` addresses that gap by letting SwiftUI focus on screens while UIKit remains the navigation engine.
 
-More concretely, it is designed for cases where `NavigationStack` alone is either awkward or too indirect to control consistently.
+### What TurboNavigator is designed for
 
-- When you need to override system transition behavior
-  - Example: opting out of the iOS 18 system tab transition animation requires control at the `UITabBarController` / `UINavigationController` layer.
-- When you need to replace or rebuild the root stack itself
-  - Example: swapping from an auth flow to the main app flow after login, or rebuilding the stack as `[.home, .detail(id: ...)]` when opening from a deep link.
-- When the active stack changes at runtime
-  - Example: the app may need the same `push` / `back` / `replace` call to target the root stack, a tab stack, or a modal stack depending on what is currently visible.
-- When route-based imperative control matters
-  - Example: flows like `backTo`, `backOrPush`, or checking `currentRoutes()` are simpler when a UIKit stack is the underlying source of truth.
-- When SwiftUI and UIKit need to coexist
-  - Example: some screens may still be existing `UIViewController`s while newer screens are written in SwiftUI, but both should use the same navigator API.
-- When one action needs to build multiple screens in sequence
-  - Example: after onboarding, you may want to push `[.home, .promotion, .detail(id: ...)]` in one go, or present a modal stack that already contains multiple routes.
-- When routes, not view instances, should be the source of truth
-  - Example: it can be more useful to inspect, compare, and restore the current stack as a route array than to reason in raw `UIViewController` references.
-- When tab, modal, and stack flows need one imperative surface
-  - Example: rules like “push onto the modal if one is active, otherwise push onto the currently selected tab stack” are easier to centralize in a navigator layer.
-- When you want navigation state decoupled from SwiftUI view state
-  - Example: screens can simply fire `navigator` actions while the actual transition policy stays in a dedicated control layer instead of being embedded in view state updates.
+- **Overriding system transition behavior**: opting out of the iOS 18 system tab transition animation can require control at the `UITabBarController` / `UINavigationController` layer.
+- **Replacing or rebuilding the root stack**: after login, you may want to swap from an auth flow to the main app flow, or rebuild the stack as `[.home, .detail(id: ...)]` when opening from a deep link.
+- **Runtime active-stack selection**: call sites should not need to know whether `push` / `back` / `replace` should apply to the root stack, a tab stack, or a modal stack.
+- **Route-based imperative control**: flows like `backTo`, `backOrPush`, or checking `currentRoutes()` are simpler when a UIKit stack is the underlying source of truth.
+- **SwiftUI and UIKit coexistence**: existing `UIViewController` screens and newer SwiftUI screens can still use the same navigator API.
+- **Building multiple screens from one action**: after onboarding, you may want to push `[.home, .promotion, .detail(id: ...)]` in one go, or present a modal stack that already contains multiple routes.
+- **Routes as the source of truth**: it can be more useful to inspect, compare, and restore the current stack as a route array than to reason in raw `UIViewController` references.
+- **One imperative surface for tab, modal, and stack flows**: rules like “push onto the modal if one is active, otherwise push onto the currently selected tab stack” can live outside screen code.
+- **Decoupling navigation state from SwiftUI view state**: screens can simply fire `navigator` actions while the actual transition policy stays in a dedicated control layer.
+
+For a small SwiftUI app with a single stack that is already well-modeled by `NavigationStack(path:)`, TurboNavigator may be unnecessary.
 
 ### Strengths
 
@@ -63,7 +70,7 @@ More concretely, it is designed for cases where `NavigationStack` alone is eithe
 ### Core pieces
 
 - `Navigator`
-  - Main entry point for push, replace, back, modal, and tab transitions
+  - Main entry point for push, replace, back, modal, tab, and deep link actions
 - `RouteRegistry`
   - Registry where each route is mapped to a screen builder
 - `RouteContext`
@@ -79,6 +86,8 @@ More concretely, it is designed for cases where `NavigationStack` alone is eithe
   - You can build flows like `push([.home, .detail(id: "42")])` or `present([.login, .terms])` in one call.
 - Route-aware stack control
   - `backTo`, `backOrPush`, and `currentRoutes` let you reason about the stack in route terms instead of raw view controllers.
+- Modal control
+  - `present`, `presentFullScreen`, and `dismissModal` are provided, and you can specify a modal presentation style when needed.
 - Per-tab configuration
   - Each `TabNavigationItem` can define its own `prefersLargeTitles` and `hapticStyle`.
 - Tab UX controls
@@ -87,10 +96,10 @@ More concretely, it is designed for cases where `NavigationStack` alone is eithe
   - `title`, `isNavigationBarHidden`, and `isTabBarHiddenWhenPushed` let you tune navigation-bar and tab-bar behavior per screen.
 - Modal state cleanup
   - Interactive sheet dismissals also clear internal modal state so stale modal references do not linger.
+- Debug stack dump
+  - `debugSnapshot`, `debugStackDescription`, and `printStacks` show root/tab/modal stack state.
 - Preview helpers
   - `Navigator.preview` and `PreviewDependencies` make SwiftUI previews easier to wire up with mock navigation.
-
-<br/><br/>
 
 ## Current status
 
