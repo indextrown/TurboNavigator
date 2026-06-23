@@ -15,6 +15,15 @@
 You build screens with SwiftUI, but drive navigation through `enum` routes and `Navigator` commands.
 In other words, SwiftUI remains the UI layer while stack, tab, modal, and deep link flows are controlled explicitly from one place.
 
+## Why TurboNavigator?
+
+- It makes SwiftUI screens and UIKit `UIViewController` screens easier to operate in one navigation flow.
+- It exposes one `Navigator` interface for push, sheet, full-screen modal, tab switching, and stack replacement.
+- It lets internal app actions and external deep links resolve into the same typed route flow.
+- It gives WebView links, push notifications, universal links, custom schemes, and other internal/external entry points a consistent handling path.
+- It provides link-handling utilities so an in-app link can open a specific screen, and an external deep link can be converted into an internal navigation action.
+- Ultimately, it lets the app manage “which link or event opens which screen” from one place, whether the request starts inside the app, outside the app, or inside a WebView.
+
 ## Platform
 
 - Minimum deployment target: `iOS 13`

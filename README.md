@@ -15,6 +15,15 @@
 화면은 SwiftUI로 만들고, 실제 화면 전환은 `enum` route와 `Navigator` 명령으로 제어한다.
 즉, SwiftUI의 선언형 화면 작성 방식은 유지하면서도 stack, tab, modal, deep link 흐름은 한 곳에서 명시적으로 다룬다.
 
+## TurboNavigator가 필요한 이유
+
+- SwiftUI 화면과 UIKit `UIViewController` 화면을 한 navigation 흐름 안에서 함께 운영하기 쉽다.
+- push, sheet, fullScreen modal, tab 전환, stack 교체 같은 여러 화면 이동을 하나의 `Navigator` 인터페이스로 다룰 수 있다.
+- 앱 내부 버튼/링크 클릭과 앱 외부 deep link를 같은 typed route 흐름으로 연결할 수 있다.
+- WebView 안의 링크, push notification, universal link, custom scheme처럼 앱 안팎에서 들어오는 이동 요청을 일관된 방식으로 처리할 수 있다.
+- 다양한 링크 처리 기능을 제공해 앱 내부 링크 클릭 시 특정 화면으로 이동하거나, 외부에서 전달된 deep link를 앱 내부 화면 전환으로 변환하는 흐름을 단순하게 만든다.
+- 궁극적으로 앱 내부/외부/WebView를 가리지 않고 “어떤 링크 또는 이벤트가 어떤 화면으로 이어지는가”를 한 곳에서 통합 관리할 수 있게 해준다.
+
 ## 지원 환경
 
 - 최소 지원 버전: `iOS 13`
