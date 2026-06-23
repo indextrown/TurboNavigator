@@ -1,0 +1,27 @@
+name: Build and Test
+
+on:
+  pull_request:
+    branches:
+      - main
+  push:
+    branches:
+      - main
+
+jobs:
+  swift-package:
+    runs-on: macos-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Resolve package
+        run: swift package resolve
+
+      - name: Build package
+        run: xcodebuild -scheme TurboNavigator -destination "generic/platform=iOS" build
+
+      - name: Run tests
+        run: xcodebuild test -scheme TurboNavigator -destination "platform=macOS,variant=Mac Catalyst"

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Planning Pipeline"
+  short_description: "TurboNavigator 계획 요청용 3단계 검토"
+  default_prompt: "Use $planning-pipeline to review a TurboNavigator repository request with Researcher, Planner, and Reviewer perspectives before implementation, and include the issue -> branch -> commit -> PR -> user approval workflow."
