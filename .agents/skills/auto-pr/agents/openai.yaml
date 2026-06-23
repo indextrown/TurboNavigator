@@ -1,0 +1,4 @@
+interface:
+  display_name: "Auto PR"
+  short_description: "TurboNavigator 전용 PR 작성과 GitHub 게시"
+  default_prompt: "Use $auto-pr to inspect commits, prefer an issue-linked branch, title the PR as [#<issue-number>] <issue-title> when possible, and create the pull request for user approval."
