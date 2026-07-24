@@ -3,108 +3,105 @@
 <!-- <img src="https://github.com/user-attachments/assets/d279545d-5cb3-4673-bc13-28d290d8b0d2" width=220 align=right> -->
 [한국어](./README.md) | [English](./README.en.md)
 
-# Example
+# TurboNavigator
+
+`TurboNavigator` is a typed route-based navigation library that runs SwiftUI screens on top of UIKit's `UINavigationController` and `UITabBarController`.
+
+You build screens with SwiftUI and drive transitions through `enum` routes and `Navigator` commands. This keeps the declarative UI layer intact while bringing stack, tab, modal, and deep link flows under one explicit API.
+
+| Category | Support |
+| --- | --- |
+| Minimum deployment target | `iOS 13` |
+| UI layer | `SwiftUI` |
+| Navigation engine | `UIKit` |
+
+## Examples
+
 | <img src="https://github.com/user-attachments/assets/87d844e8-8214-4aa7-b988-23f157684776" width=140> | <img src="https://github.com/user-attachments/assets/c38d6256-7bb7-4257-a9f2-978be32a8605" width=140> | <img src="https://github.com/user-attachments/assets/4143ca3e-c60c-4edc-8659-e97617d1b8a8" width=140> | <img src="https://github.com/user-attachments/assets/ea4bdb80-7f64-4949-a301-d06feb161792" width=140> | <img src="https://github.com/user-attachments/assets/b4648528-ebda-496a-8544-bc9d44cf616d" width=140> |
 |:---:|:---:|:---:|:---:|:---:|
 | push(A) | push([A, B]) | present | presentFullScreen | DeepLink |
 
-# TurboNavigator
+## Contents
 
-`TurboNavigator` is a typed route-based navigation library that runs SwiftUI screens on top of UIKit `UINavigationController` / `UITabBarController`.
+- [What problem does it solve?](#what-problem-does-it-solve)
+- [Core components](#core-components)
+- [Key features](#key-features)
+- [Demo projects](#demo-projects)
+- [Installation](#installation)
+- [Quick Start](#quick-start)
+- [Usage notes](#usage-notes)
+- [API and time complexity](#api-and-time-complexity)
+- [Architecture](#architecture)
 
-You build screens with SwiftUI, but drive navigation through `enum` routes and `Navigator` commands.
-In other words, SwiftUI remains the UI layer while stack, tab, modal, and deep link flows are controlled explicitly from one place.
+## What problem does it solve?
 
-## Why TurboNavigator?
+As an app grows, push, modal, tab, and deep link flows tend to spread across different state models and calling conventions. `TurboNavigator` brings those transitions under one `Navigator` interface and one typed route flow.
 
-- It makes SwiftUI screens and UIKit `UIViewController` screens easier to operate in one navigation flow.
-- It exposes one `Navigator` interface for push, sheet, full-screen modal, tab switching, and stack replacement.
-- It lets internal app actions and external deep links resolve into the same typed route flow.
-- It gives WebView links, push notifications, universal links, custom schemes, and other internal/external entry points a consistent handling path.
-- It provides link-handling utilities so an in-app link can open a specific screen, and an external deep link can be converted into an internal navigation action.
-- Ultimately, it lets the app manage “which link or event opens which screen” from one place, whether the request starts inside the app, outside the app, or inside a WebView.
+- Bring `NavigationStack`, `TabView`, `sheet`, and `fullScreenCover` transitions under one policy.
+- Run SwiftUI screens and existing UIKit `UIViewController` screens in one navigation flow.
+- Use the same calling style for push, sheet, full-screen modal, tab switching, and stack replacement.
+- Resolve in-app actions, WebView links, push notifications, universal links, and custom schemes into typed routes.
+- Keep the rule for “which link or event opens which screen” outside individual screens.
+- Make transitions type-safe and traceable with `enum` routes and explicit dependency injection.
 
-## Platform
+### Why use a UIKit engine?
 
-- Minimum deployment target: `iOS 13`
-- UI layer: `SwiftUI`
-- Navigation engine: `UIKit`
+`NavigationStack` works well when a single stack can be expressed as a declarative path. Once navigation also needs transition policies, however, path mutations and screen-level control code can spread quickly. `TurboNavigator` keeps SwiftUI focused on screen composition while UIKit handles complex transitions.
 
-## Why a UIKit-powered engine?
+- Handle `stack`, `tab`, `modal`, and `deep link` transitions through one `Navigator` API.
+- `Navigator` decides whether push, back, or replace should target the root, selected tab, or modal stack.
+- Imperative actions such as `backTo`, `backOrPush`, `replace`, and `switchTab` use one calling style.
+- Replace the root flow after login, or rebuild it as `[.home, .detail(id: ...)]` when handling a deep link.
+- Build `[.home, .promotion, .detail(id: ...)]` after onboarding, or present a modal with multiple routes already in place.
+- Treat route arrays, rather than raw `UIViewController` references, as the source of truth for inspecting, comparing, and restoring navigation state.
+- Control navigation-bar and tab-bar visibility, tab animations, interactive-dismiss cleanup, and existing `UIViewController` reuse at the controller layer.
+- Keep the same API when some screens use SwiftUI and others use `UIViewController`.
+- Keep rules such as “push onto the modal if one is active, otherwise push onto the currently selected tab stack” outside screen code.
+- Configure `UITabBarController` and `UINavigationController` behavior, including opting out of the iOS 18 system tab transition animation.
+- Support `iOS 13` without depending exclusively on newer APIs such as `NavigationStack`.
 
-`NavigationStack` is a good fit when a single stack can be represented as a declarative path. But once navigation becomes a transition policy rather than just view state, it becomes awkward to manage the flows real apps often need from one place.
+### When is `NavigationStack` a better fit?
 
-### Where SwiftUI NavigationStack gets awkward
+For a small SwiftUI app whose single stack is already well modeled by `NavigationStack(path:)`, adding `TurboNavigator` may create more structure than you need.
 
-- Call sites can easily end up caring whether a push should target the root stack, a tab stack, or a stack above a modal.
-- Imperative controls like `backTo`, `backOrPush`, `replace`, or returning to root when reselecting the same tab tend to become scattered path-array mutations or screen-level code.
-- `NavigationStack`, `TabView`, `sheet`, `fullScreenCover`, and deep links all use different state models and calling conventions, making them hard to treat as one transition system.
-- Even when screens are written cleanly in SwiftUI, complex screen transitions often still need a separate control layer.
-- Navigation-bar / tab-bar visibility, tab transition animation, interactive dismiss cleanup, and existing `UIViewController` reuse are often simpler at the UIKit controller layer.
+## Core components
 
-`TurboNavigator` addresses that gap by letting SwiftUI focus on screens while UIKit remains the navigation engine.
+| Component | Role |
+| --- | --- |
+| `Navigator` | Main entry point for push, replace, back, modal, tab, and deep link actions |
+| `RouteRegistry` | Registry that maps each route to a screen builder |
+| `RouteContext` | Execution context passed to builders, containing `route`, `navigator`, and `dependencies` |
+| `NavigationContainer` / `TabNavigationContainer` | SwiftUI bridges that host the UIKit navigation engine |
+| `DeepLinkParser` | Protocol that converts a URL into a typed route-based deep link |
 
-### What TurboNavigator is designed for
+## Key features
 
-- **Overriding system transition behavior**: opting out of the iOS 18 system tab transition animation can require control at the `UITabBarController` / `UINavigationController` layer.
-- **Replacing or rebuilding the root stack**: after login, you may want to swap from an auth flow to the main app flow, or rebuild the stack as `[.home, .detail(id: ...)]` when opening from a deep link.
-- **Runtime active-stack selection**: call sites should not need to know whether `push` / `back` / `replace` should apply to the root stack, a tab stack, or a modal stack.
-- **Route-based imperative control**: flows like `backTo`, `backOrPush`, or checking `currentRoutes()` are simpler when a UIKit stack is the underlying source of truth.
-- **SwiftUI and UIKit coexistence**: existing `UIViewController` screens and newer SwiftUI screens can still use the same navigator API.
-- **Building multiple screens from one action**: after onboarding, you may want to push `[.home, .promotion, .detail(id: ...)]` in one go, or present a modal stack that already contains multiple routes.
-- **Routes as the source of truth**: it can be more useful to inspect, compare, and restore the current stack as a route array than to reason in raw `UIViewController` references.
-- **One imperative surface for tab, modal, and stack flows**: rules like “push onto the modal if one is active, otherwise push onto the currently selected tab stack” can live outside screen code.
-- **Decoupling navigation state from SwiftUI view state**: screens can simply fire `navigator` actions while the actual transition policy stays in a dedicated control layer.
-
-For a small SwiftUI app with a single stack that is already well-modeled by `NavigationStack(path:)`, TurboNavigator may be unnecessary.
-
-### Strengths
-
-- Unifies `stack`, `tab`, `modal`, and `deep link` flows behind one `Navigator` API.
-- `Navigator` decides whether the current active target is the root stack, tab stack, or modal stack, which keeps call sites simpler.
-- Imperative operations like `backTo`, `backOrPush`, `replace`, and `switchTab` all follow the same calling style.
-- `enum`-based routes and explicit dependency injection create a type-safe, traceable navigation setup.
-- SwiftUI stays focused on screen composition while the UIKit engine handles complex transitions.
-- The design is not tied only to newer APIs such as `NavigationStack`, so it can still support `iOS 13`.
-
-### Core pieces
-
-- `Navigator`
-  - Main entry point for push, replace, back, modal, tab, and deep link actions
-- `RouteRegistry`
-  - Registry where each route is mapped to a screen builder
-- `RouteContext`
-  - Execution context passed into builders, containing `route`, `navigator`, and `dependencies`
-- `NavigationContainer` / `TabNavigationContainer`
-  - SwiftUI bridges that host the UIKit navigation engine
-- `DeepLinkParser`
-  - Protocol that converts a URL into a typed route-based deep link
-
-### Easy-to-miss features
-
-- Multi-route push/present
-  - You can build flows like `push([.home, .detail(id: "42")])` or `present([.login, .terms])` in one call.
-- Route-aware stack control
-  - `backTo`, `backOrPush`, and `currentRoutes` let you reason about the stack in route terms instead of raw view controllers.
-- Modal control
-  - `present`, `presentFullScreen`, and `dismissModal` are provided, and you can specify a modal presentation style when needed.
-- Per-tab configuration
-  - Each `TabNavigationItem` can define its own `prefersLargeTitles` and `hapticStyle`.
-- Tab UX controls
-  - Supports pop-to-root on tab reselect, `isTabBarHidden`, and opting out of the iOS 18 system tab transition animation.
-- WrappingController controls
-  - `title`, `isNavigationBarHidden`, and `isTabBarHiddenWhenPushed` let you tune navigation-bar and tab-bar behavior per screen.
-- Modal state cleanup
-  - Interactive sheet dismissals also clear internal modal state so stale modal references do not linger.
-- Debug stack dump
-  - `debugSnapshot`, `debugStackDescription`, and `printStacks` show root/tab/modal stack state.
-- Preview helpers
-  - `Navigator.preview` and `PreviewDependencies` make SwiftUI previews easier to wire up with mock navigation.
+| Feature | Description |
+| --- | --- |
+| Multi-route push/present | Build flows such as `push([.home, .detail(id: "42")])` or `present([.login, .terms])` in one call. |
+| Route-aware stack control | Use `backTo`, `backOrPush`, and `currentRoutes` to reason about the stack in route terms. |
+| Modal control | Call `present`, `presentFullScreen`, and `dismissModal`, with an optional modal presentation style. |
+| Per-tab configuration | Set `prefersLargeTitles` and `hapticStyle` independently on each `TabNavigationItem`. |
+| Tab UX controls | Pop to root when reselecting a tab, use `isTabBarHidden`, or opt out of the iOS 18 system tab transition animation. |
+| `WrappingController` controls | Tune navigation-bar and tab-bar visibility per screen with `title`, `isNavigationBarHidden`, and `isTabBarHiddenWhenPushed`. |
+| Modal state cleanup | Clear internal modal state after an interactive sheet dismissal so stale references do not linger. |
+| Debug stack dump | Inspect root, tab, and modal stacks with `debugSnapshot`, `debugStackDescription`, and `printStacks`. |
+| Preview helpers | Create a mock navigator for SwiftUI previews with `Navigator.preview` and `PreviewDependencies`. |
 
 ## Current status
 
 - Implemented: typed route-based `Navigator`, `RouteRegistry`, explicit DI, stack/modal/tab operations, deep link entry point, SwiftUI bridge, tab haptics, iOS 18 system tab transition animation opt-out, demo app
 - Lower priority: generalized nested modal handling, `remove`-style operations, default deep link parser implementation, state restoration, expanded UIKit-only examples
+
+## Demo projects
+
+| Demo | What it covers |
+| --- | --- |
+| [TCA + TurboNavigator modular demo](./Demo/SwiftUITCATurboModularDemo) | TCA feature modules, a navigation dependency, `RouteRegistry` composition, `TestStore` tests, and UI navigation tests |
+| [SwiftUI modular demo](./Demo/SwiftUIModularDemo) | Feature-level modules composed with `TurboNavigator` |
+| [Interface/Implementation modular demo](./Demo/SwiftUIInterfaceModularDemo) | Dependency boundaries split into interface and implementation targets |
+
+If you are integrating TCA for the first time, start with the [TCA modular demo guide](./Demo/SwiftUITCATurboModularDemo/README.md).
 
 ## Installation
 
@@ -257,6 +254,10 @@ navigator.switchTab(tag: 1)
 navigator.currentRoutes()
 ```
 
+Use `backTo` to return to a route already in the stack, or `backOrPush` to push it when it is absent. Call `currentRoutes()` first when the action depends on the current stack.
+
+Both `backTo` and `backOrPush` require screens whose routes can be tracked.
+
 ### 7. Hook up deep links
 
 ```swift
@@ -296,12 +297,25 @@ Example URLs:
 
 ## Usage notes
 
+### Routes and screen registration
+
 - Routes can mix fixed cases like `.home` with associated-value cases like `.detail(id:)`.
 - Gather external dependencies in `Dependencies`, then access them inside builders through `context.dependencies`.
-- Register fixed routes with `registering(_:)` and associated-value routes with `registering(extracting:)`.
+- Register fixed routes with `registering(_:)`, associated-value routes with `registering(extracting:)`, and conditional routes with `registering(matching:)`.
+- A builder can wrap a SwiftUI screen in `WrappingController` or return a `UIViewController` directly in a UIKit project.
+- `backTo` and `backOrPush` work with screens whose routes can be tracked. A UIKit screen that does not use `WrappingController` must adopt `AnyRouteIdentifiable` directly.
+
+### Screen presentation settings
+
+- `WrappingController` hides the navigation bar by default when `title == nil`. To keep the bar without a title, set `title: ""` or `isNavigationBarHidden: false`.
 - Set `disablesSystemTabTransitionAnimation` on `TabNavigationContainer` to `true` if you want to opt out of the iOS 18 system tab transition animation. The same setting applies to both tab-bar taps and `navigator.switchTab(tag:)`.
-- Screens do not need to manipulate `UIViewController` directly; they can just call `navigator`.
+- Screens do not need to manipulate `UIViewController` directly; they can call `navigator`, use `push` or `back` for ordinary movement, and use `replace` to rebuild the stack.
+- A parsed deep link can also choose `replace` when it needs to reset the current flow.
+
+### Runtime policies
+
 - For deep links, the app receives the URL, the parser converts it into `DeepLink<Route>`, and `navigator.handle(url:parser:)` executes it.
+- Screens only issue `navigator` commands; transition rules stay outside screen code.
 - Create and call `Navigator`, coordinators, route builders, and SwiftUI/UIKit adapters on the `MainActor` because they manage UIKit state.
 - While a modal transition is in progress, another `present` is ignored and `dismissModal` is deferred until presentation completes. Stack commands target the selected tab or root instead of a stale modal, and a failed modal build keeps the existing modal state.
 
@@ -314,20 +328,27 @@ Example URLs:
 5. Did you connect `NavigationContainer` or `TabNavigationContainer`?
 6. Are your screens calling `navigator.push/present/back`?
 
-## Supported operations
+## API and time complexity
 
 The time complexity below is an approximate cost based on the current implementation.
 
-- `B`: number of registered `RouteBuilder`s
-- `S`: length of the currently active `UINavigationController` stack
-- `R`: number of routes passed at once
-- `P`: parser cost implemented by the app
-- `A`: execution cost of the parsed action
+| Symbol | Meaning |
+| --- | --- |
+| `B` | Number of registered `RouteBuilder`s |
+| `S` | Length of the currently active `UINavigationController` stack |
+| `R` | Number of routes passed at once |
+| `T` | Number of tabs |
+| `P` | Cost of the parser implemented by the app |
+| `A` | Cost of executing the parsed action |
 
-- Stack: `push`, `replace`, `back`, `backTo`, `backOrPush`, `currentRoutes`
-- Modal: `present`, `presentFullScreen`, `dismissModal`
-- Tab: `switchTab`
-- Deep Link: `handle(_:)`, `handle(url:parser:)`
+| Category | API |
+| --- | --- |
+| Stack | `push`, `replace`, `back`, `backTo`, `backOrPush`, `currentRoutes` |
+| Modal | `present`, `presentFullScreen`, `dismissModal` |
+| Tab | `switchTab` |
+| State | `isModalActive` |
+| Deep link | `handle(_:)`, `handle(url:parser:)` |
+| Debug | `debugSnapshot`, `debugStackDescription`, `printStacks` |
 
 ### Stack
 
@@ -353,12 +374,18 @@ The time complexity below is an approximate cost based on the current implementa
 - `switchTab(tag:)`: `O(1)`
 - `switchTab(tag:popToRootIfSelected:)`: `O(1)` for a normal tab switch, `O(S)` when reselecting the same tab and popping to root
 
-### Deep Link
+### Deep link
 
 - `handle(_ deepLink:)`: follows the same cost as `push`, `replace`, or `present`, depending on the deep link action
 - `handle(url:parser:)`: `O(P + A)`
 
-Policies:
+### Debugging
+
+- `debugSnapshot()`: `O(S + T * S)`
+- `debugStackDescription()`: `O(S + T * S)`
+- `printStacks()`: `O(S + T * S)`
+
+### Navigation policies
 
 - Each tab owns its own `UINavigationController`.
 - Only one modal layer is kept at a time, and presenting a new modal replaces the existing modal.
@@ -366,6 +393,7 @@ Policies:
 - Deep link parsing is handled by the app, while the navigator executes the parsed action.
 
 ## Architecture
+
 ```mermaid
 flowchart TD
     A[User Action / DeepLink URL] --> B{Input Type}
