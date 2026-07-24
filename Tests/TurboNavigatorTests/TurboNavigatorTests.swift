@@ -123,6 +123,49 @@ private final class PresenterNavigationController: UINavigationController {
     }
 }
 
+private final class DeferredPresentationNavigationController: UINavigationController {
+    private(set) var presentCallCount = 0
+    private(set) weak var presentedController: UIViewController?
+    private var presentationCompletion: (() -> Void)?
+
+    override func present(
+        _ viewControllerToPresent: UIViewController,
+        animated flag: Bool,
+        completion: (() -> Void)? = nil
+    ) {
+        presentCallCount += 1
+        presentedController = viewControllerToPresent
+        presentationCompletion = completion
+    }
+
+    func completePresentation() {
+        let completion = presentationCompletion
+        presentationCompletion = nil
+        completion?()
+    }
+}
+
+private final class DeferredDismissNavigationController: UINavigationController {
+    private(set) var dismissCallCount = 0
+    private(set) var lastDismissWasAnimated: Bool?
+    private var dismissalCompletion: (() -> Void)?
+
+    override func dismiss(
+        animated flag: Bool,
+        completion: (() -> Void)? = nil
+    ) {
+        dismissCallCount += 1
+        lastDismissWasAnimated = flag
+        dismissalCompletion = completion
+    }
+
+    func completeDismissal() {
+        let completion = dismissalCompletion
+        dismissalCompletion = nil
+        completion?()
+    }
+}
+
 private final class TrackingNavigationController: UINavigationController {
     private(set) var pushCallCount = 0
     private(set) var setViewControllersCallCount = 0
@@ -138,7 +181,21 @@ private final class TrackingNavigationController: UINavigationController {
     }
 }
 
+@MainActor
 final class TurboNavigatorTests: XCTestCase {
+
+    private func makeTestRegistry() -> RouteRegistry<Void, TestRoute> {
+        RouteRegistry<Void, TestRoute>()
+            .registering(TestRoute.home) { context in
+                TestViewController(route: context.route)
+            }
+            .registering(TestRoute.detail) { context in
+                TestViewController(route: context.route)
+            }
+            .registering(TestRoute.settings) { context in
+                TestViewController(route: context.route)
+            }
+    }
     
     // route
     func test_레지스트리가_일치하는_컨트롤러를_생성한다() {
@@ -368,6 +425,130 @@ final class TurboNavigatorTests: XCTestCase {
         XCTAssertEqual(rootController.viewControllers.count, 1)
         XCTAssertEqual((rootController.viewControllers.first as? TestViewController)?.route, TestRoute.home)
     }
+
+    func test_tab_detach_후_stack_명령은_root_controller를_사용한다() {
+
+        /// given
+        let navigator = Navigator<Void, TestRoute>(
+            dependencies: (),
+            registry: makeTestRegistry()
+        )
+        let rootController = UINavigationController()
+        rootController.setViewControllers(navigator.launch([TestRoute.home]), animated: false)
+        navigator.rootController = rootController
+
+        let tabBarController = UITabBarController()
+        let tabControllers = navigator.tabCoordinator.launch(
+            items: [.init(tag: 0, route: TestRoute.home)],
+            navigator: navigator
+        )
+        tabBarController.setViewControllers(tabControllers, animated: false)
+        navigator.tabCoordinator.attach(to: tabBarController)
+
+        navigator.push(TestRoute.detail, animated: false)
+        XCTAssertTrue(navigator.activeController === tabControllers[0])
+        XCTAssertEqual(tabControllers[0].viewControllers.count, 2)
+
+        /// when
+        navigator.tabCoordinator.detach(from: tabBarController)
+        navigator.push(TestRoute.detail, animated: false)
+
+        /// then
+        XCTAssertTrue(navigator.activeController === rootController)
+        XCTAssertEqual(rootController.viewControllers.count, 2)
+        XCTAssertEqual(tabControllers[0].viewControllers.count, 2)
+        XCTAssertTrue(navigator.tabCoordinator.tabCoordinators.isEmpty)
+        XCTAssertTrue(navigator.tabCoordinator.orderedTags.isEmpty)
+        XCTAssertNil(navigator.tabCoordinator.currentTag)
+    }
+
+    func test_이전_tab_container의_detach는_새_connection을_정리하지_않는다() {
+
+        /// given
+        let navigator = Navigator<Void, TestRoute>(
+            dependencies: (),
+            registry: makeTestRegistry()
+        )
+        let firstTabBarController = UITabBarController()
+        let secondTabBarController = UITabBarController()
+        let tabControllers = navigator.tabCoordinator.launch(
+            items: [.init(tag: 0, route: TestRoute.home)],
+            navigator: navigator
+        )
+        firstTabBarController.setViewControllers(tabControllers, animated: false)
+        secondTabBarController.setViewControllers(tabControllers, animated: false)
+        navigator.tabCoordinator.attach(to: firstTabBarController)
+        navigator.tabCoordinator.attach(to: secondTabBarController)
+
+        /// when
+        navigator.tabCoordinator.detach(from: firstTabBarController)
+
+        /// then
+        XCTAssertTrue(navigator.tabCoordinator.tabBarController === secondTabBarController)
+        XCTAssertTrue(navigator.activeController === tabControllers[0])
+        XCTAssertEqual(navigator.tabCoordinator.orderedTags, [0])
+    }
+
+    func test_tab_detach_후_navigation_controller와_화면이_해제된다() {
+
+        weak var weakNavigationController: UINavigationController?
+        weak var weakViewController: UIViewController?
+
+        autoreleasepool {
+            let navigator = Navigator<Void, TestRoute>(
+                dependencies: (),
+                registry: makeTestRegistry()
+            )
+            let tabBarController = UITabBarController()
+            var tabControllers: [UINavigationController]? = navigator.tabCoordinator.launch(
+                items: [.init(tag: 0, route: TestRoute.home)],
+                navigator: navigator
+            )
+            tabBarController.setViewControllers(tabControllers, animated: false)
+            navigator.tabCoordinator.attach(to: tabBarController)
+
+            weakNavigationController = tabControllers?.first
+            weakViewController = tabControllers?.first?.viewControllers.first
+
+            navigator.tabCoordinator.detach(from: tabBarController)
+            tabBarController.setViewControllers([], animated: false)
+            tabControllers = nil
+        }
+
+        XCTAssertNil(weakNavigationController)
+        XCTAssertNil(weakViewController)
+    }
+
+    func test_activeController는_modal_tab_root_순서로_선택한다() {
+
+        /// given
+        let navigator = Navigator<Void, TestRoute>(
+            dependencies: (),
+            registry: makeTestRegistry()
+        )
+        let rootController = UINavigationController()
+        navigator.rootController = rootController
+
+        let tabBarController = UITabBarController()
+        let tabControllers = navigator.tabCoordinator.launch(
+            items: [.init(tag: 0, route: TestRoute.home)],
+            navigator: navigator
+        )
+        tabBarController.setViewControllers(tabControllers, animated: false)
+        navigator.tabCoordinator.attach(to: tabBarController)
+
+        let modalController = UINavigationController()
+        navigator.modalController = modalController
+
+        /// then
+        XCTAssertTrue(navigator.activeController === modalController)
+
+        navigator.modalController = nil
+        XCTAssertTrue(navigator.activeController === tabControllers[0])
+
+        navigator.tabCoordinator.detach(from: tabBarController)
+        XCTAssertTrue(navigator.activeController === rootController)
+    }
     
     // present
     func test_present를_호출하면_모달_컨트롤러가_생성된다() {
@@ -429,6 +610,144 @@ final class TurboNavigatorTests: XCTestCase {
         XCTAssertFalse(firstModal === secondModal)
         XCTAssertEqual(firstModal?.dismissCallCount, 1)
         XCTAssertEqual(rootController.presentCallCount, 2)
+    }
+
+    func test_ModalCoordinator는_기존_modal_dismiss_완료_후_새_modal_상태를_준비한다() {
+
+        /// given
+        let navigator = Navigator<Void, TestRoute>(
+            dependencies: (),
+            registry: makeTestRegistry()
+        )
+        let presenter = PresenterNavigationController()
+        let existingModal = DeferredDismissNavigationController()
+        let modalCoordinator = ModalCoordinator<Void, TestRoute>()
+        var preparedController: UINavigationController?
+
+        /// when
+        let nextModal = modalCoordinator.present(
+            routes: [TestRoute.settings],
+            from: presenter,
+            existingModalController: existingModal,
+            navigator: navigator,
+            animated: true,
+            presentationStyle: .automatic,
+            onPrepared: { preparedController = $0 }
+        )
+
+        /// then
+        XCTAssertNotNil(nextModal)
+        XCTAssertNil(preparedController)
+        XCTAssertEqual(presenter.presentCallCount, 0)
+
+        existingModal.completeDismissal()
+
+        XCTAssertTrue(preparedController === nextModal)
+        XCTAssertEqual(presenter.presentCallCount, 1)
+    }
+
+    func test_modal_present_전환_중_중복_present는_무시하고_dismiss는_완료_후_실행한다() {
+
+        /// given
+        let modalController = DeferredDismissNavigationController()
+        let navigator = Navigator<Void, TestRoute>(
+            dependencies: (),
+            registry: makeTestRegistry(),
+            modalCoordinator: ModalCoordinator(makeNavigationController: { modalController })
+        )
+        let rootController = DeferredPresentationNavigationController()
+        navigator.rootController = rootController
+
+        /// when
+        navigator.present(TestRoute.settings, animated: false)
+        navigator.present(TestRoute.home, animated: false)
+        navigator.dismissModal(animated: true)
+
+        /// then
+        XCTAssertTrue(navigator.isModalTransitioning)
+        XCTAssertFalse(navigator.isModalActive)
+        XCTAssertEqual(rootController.presentCallCount, 1)
+        XCTAssertEqual(modalController.dismissCallCount, 0)
+        XCTAssertEqual(
+            (modalController.viewControllers.first as? TestViewController)?.route,
+            TestRoute.settings
+        )
+        XCTAssertTrue(navigator.activeController === rootController)
+        XCTAssertEqual(navigator.debugSnapshot().activeTarget, .root)
+        XCTAssertTrue(navigator.debugSnapshot().modalRoutes.isEmpty)
+
+        rootController.completePresentation()
+
+        XCTAssertFalse(navigator.isModalActive)
+        XCTAssertTrue(navigator.isModalTransitioning)
+        XCTAssertEqual(modalController.dismissCallCount, 1)
+        XCTAssertEqual(modalController.lastDismissWasAnimated, true)
+        XCTAssertTrue(navigator.activeController === rootController)
+
+        modalController.completeDismissal()
+
+        XCTAssertFalse(navigator.isModalTransitioning)
+    }
+
+    func test_interactive_modal_dismiss_완료_후_logical_state를_정리한다() throws {
+
+        /// given
+        let navigator = Navigator<Void, TestRoute>(
+            dependencies: (),
+            registry: makeTestRegistry(),
+            modalCoordinator: ModalCoordinator(makeNavigationController: { PresenterNavigationController() })
+        )
+        let rootController = PresenterNavigationController()
+        navigator.rootController = rootController
+        navigator.present(TestRoute.home, animated: false)
+        let previousModalController = try XCTUnwrap(navigator.modalController)
+        navigator.present(TestRoute.settings, animated: false)
+        let modalController = try XCTUnwrap(navigator.modalController)
+
+        /// when
+        navigator.modalPresentationDidDismiss(previousModalController)
+
+        /// then
+        XCTAssertTrue(navigator.modalController === modalController)
+        XCTAssertTrue(navigator.isModalActive)
+
+        /// when
+        navigator.modalPresentationDidDismiss(modalController)
+
+        /// then
+        XCTAssertFalse(navigator.isModalActive)
+        XCTAssertFalse(navigator.isModalTransitioning)
+        XCTAssertTrue(navigator.activeController === rootController)
+        XCTAssertTrue(navigator.debugSnapshot().modalRoutes.isEmpty)
+    }
+
+    func test_modal_dismiss_진행_중_push는_stale_modal이_아닌_root에_전달한다() {
+
+        /// given
+        let modalController = DeferredDismissNavigationController()
+        let navigator = Navigator<Void, TestRoute>(
+            dependencies: (),
+            registry: makeTestRegistry(),
+            modalCoordinator: ModalCoordinator(makeNavigationController: { modalController })
+        )
+        let rootController = PresenterNavigationController()
+        rootController.setViewControllers(navigator.launch([TestRoute.home]), animated: false)
+        navigator.rootController = rootController
+        navigator.present(TestRoute.settings, animated: false)
+
+        /// when
+        navigator.dismissModal(animated: true)
+        navigator.push(TestRoute.detail, animated: false)
+
+        /// then
+        XCTAssertFalse(navigator.isModalActive)
+        XCTAssertTrue(navigator.isModalTransitioning)
+        XCTAssertTrue(navigator.activeController === rootController)
+        XCTAssertEqual(rootController.viewControllers.count, 2)
+        XCTAssertEqual(modalController.viewControllers.count, 1)
+
+        modalController.completeDismissal()
+        XCTAssertFalse(navigator.isModalTransitioning)
     }
 
     func test_present는_build된_컨트롤러가_없으면_기존_모달을_유지한다() {
@@ -715,15 +1034,18 @@ final class TurboNavigatorTests: XCTestCase {
         rootController.setViewControllers(navigator.launch([TestRoute.home, TestRoute.detail]), animated: false)
         navigator.rootController = rootController
 
-        _ = navigator.tabCoordinator.launch(
+        let tabControllers = navigator.tabCoordinator.launch(
             items: [
                 .init(tag: 0, route: TestRoute.home),
                 .init(tag: 1, route: TestRoute.settings)
             ],
             navigator: navigator
         )
+        let tabBarController = UITabBarController()
+        tabBarController.setViewControllers(tabControllers, animated: false)
 
         navigator.present(TestRoute.settings, animated: false)
+        navigator.tabCoordinator.attach(to: tabBarController)
 
         /// when
         let snapshot = navigator.debugSnapshot()
@@ -759,13 +1081,16 @@ final class TurboNavigatorTests: XCTestCase {
         rootController.setViewControllers(navigator.launch([TestRoute.home, TestRoute.detail]), animated: false)
         navigator.rootController = rootController
 
-        _ = navigator.tabCoordinator.launch(
+        let tabControllers = navigator.tabCoordinator.launch(
             items: [
                 .init(tag: 0, route: TestRoute.home),
                 .init(tag: 1, route: TestRoute.settings)
             ],
             navigator: navigator
         )
+        let tabBarController = UITabBarController()
+        tabBarController.setViewControllers(tabControllers, animated: false)
+        navigator.tabCoordinator.attach(to: tabBarController)
 
         /// when
         let description = navigator.debugStackDescription()

@@ -12,6 +12,7 @@ import UIKit
 ///
 /// `UIAdaptivePresentationControllerDelegate` 를 통해 interactive dismiss 완료 시점을 감지하고
 /// 외부에서 주입한 `onDidDismiss` 클로저를 실행합니다.
+@MainActor
 private final class ModalPresentationObserver: NSObject, UIAdaptivePresentationControllerDelegate {
     var onDidDismiss: ((UIPresentationController) -> Void)?
 
@@ -40,6 +41,7 @@ private final class ModalPresentationObserver: NSObject, UIAdaptivePresentationC
 ///   ├── SingleStackCoordinator (push/pop)
 ///   ├── ModalCoordinator (present/dismiss)
 ///   └── TabCoordinator (탭 관리)
+@MainActor
 public final class Navigator<Dependencies, Route: Hashable> {
     
     /// 외부 의존성(DI)
@@ -56,6 +58,15 @@ public final class Navigator<Dependencies, Route: Hashable> {
 
     /// 제스처 dismiss 후 stale modal state를 정리하기 위한 observer
     private let modalPresentationObserver = ModalPresentationObserver()
+
+    /// UIKit modal 전환이 진행 중인지 여부
+    private(set) var isModalTransitioning = false
+
+    /// presentation 완료 전까지 외부 상태에 노출하지 않는 modal controller
+    private var transitioningModalController: UINavigationController?
+
+    /// present 전환 중 들어온 dismiss 요청의 애니메이션 설정
+    private var pendingModalDismissAnimation: Bool?
     
     /// Stack 전용 Coordinator
     public let singleStackCoordinator: SingleStackCoordinator<Route>
@@ -80,9 +91,6 @@ public final class Navigator<Dependencies, Route: Hashable> {
         self.singleStackCoordinator = singleStackCoordinator
         self.modalCoordinator = modalCoordinator
         self.tabCoordinator = tabCoordinator
-        self.modalPresentationObserver.onDidDismiss = { [weak self] presentationController in
-            self?.clearModalControllerIfNeeded(for: presentationController)
-        }
     }
     
     
@@ -93,7 +101,7 @@ public final class Navigator<Dependencies, Route: Hashable> {
     ///   2. Tab
     ///   3. Root
     public var activeController: UINavigationController? {
-        if let modalController {
+        if !isModalTransitioning, let modalController {
             return modalController
         }
 
@@ -113,9 +121,15 @@ public final class Navigator<Dependencies, Route: Hashable> {
     }
 
 
-    private func clearModalControllerIfNeeded(for presentationController: UIPresentationController) {
-        guard modalController?.presentationController === presentationController else { return }
+    func modalPresentationDidDismiss(_ dismissedController: UINavigationController) {
+        guard modalController === dismissedController else { return }
+        dismissedController.presentationController?.delegate = nil
         modalController = nil
+
+        guard !isModalTransitioning else { return }
+
+        transitioningModalController = nil
+        pendingModalDismissAnimation = nil
     }
     
     
@@ -298,18 +312,45 @@ extension Navigator {
         style: ModalPresentationStyle = .automatic
     ) {
         guard let presentationController else { return }
+        guard !isModalTransitioning else { return }
 
-        guard let newModalController = modalCoordinator.present(
+        isModalTransitioning = true
+
+        guard modalCoordinator.present(
             routes: routes,
             from: presentationController,
             existingModalController: modalController,
             navigator: self,
             animated: animated,
-            presentationStyle: style
-        ) else { return }
+            presentationStyle: style,
+            onPrepared: { [weak self] modalController in
+                guard let self else { return }
+                self.modalController?.presentationController?.delegate = nil
+                self.modalController = nil
+                self.transitioningModalController = modalController
+            },
+            completion: { [weak self] modalController in
+                guard let self, self.transitioningModalController === modalController else { return }
 
-        modalController = newModalController
-        newModalController.presentationController?.delegate = modalPresentationObserver
+                self.transitioningModalController = nil
+                self.modalController = modalController
+                self.modalPresentationObserver.onDidDismiss = { [weak self, weak modalController] _ in
+                    guard let modalController else { return }
+                    self?.modalPresentationDidDismiss(modalController)
+                }
+                modalController.presentationController?.delegate = self.modalPresentationObserver
+                self.isModalTransitioning = false
+
+                if let pendingAnimation = self.pendingModalDismissAnimation {
+                    self.pendingModalDismissAnimation = nil
+                    self.dismissModal(animated: pendingAnimation)
+                }
+            }
+        ) != nil else {
+            transitioningModalController = nil
+            isModalTransitioning = false
+            return
+        }
     }
     
     
@@ -343,12 +384,20 @@ extension Navigator {
     
     /// 현재 modal을 dismiss합니다.
     public func dismissModal(animated: Bool = true) {
-        let dismissedController = modalController
+        if isModalTransitioning {
+            pendingModalDismissAnimation = animated
+            return
+        }
 
-        modalCoordinator.dismiss(modalController: modalController, animated: animated) { [weak self] in
-            guard let self, self.modalController === dismissedController else { return }
-            dismissedController?.presentationController?.delegate = nil
-            self.modalController = nil
+        guard let dismissedController = modalController else { return }
+
+        isModalTransitioning = true
+        dismissedController.presentationController?.delegate = nil
+        modalController = nil
+
+        modalCoordinator.dismiss(modalController: dismissedController, animated: animated) { [weak self] in
+            guard let self else { return }
+            self.isModalTransitioning = false
         }
     }
 }

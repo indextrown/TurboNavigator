@@ -38,6 +38,7 @@ private extension UITabBarController {
 ///   - Generic:
 ///     - Dependencies: 화면 생성 시 필요한 외부 의존성
 ///     - Route: Hashable 라우트 타입
+@MainActor
 public final class TabCoordinator<Dependencies, Route: Hashable> {
     
     /// 연결된 UITabbarController
@@ -55,7 +56,7 @@ public final class TabCoordinator<Dependencies, Route: Hashable> {
     /// iOS 18의 기본 탭 전환 애니메이션을 비활성화할지 여부
     public var disablesSystemTabTransitionAnimation = false
     
-    public init() {}
+    nonisolated public init() {}
     
     
     /// 현재 선택한 탭의 UINavigationController를 반환합니다.
@@ -67,12 +68,40 @@ public final class TabCoordinator<Dependencies, Route: Hashable> {
     ///   UITabBarController의 selectedViewController를 우선 사용하고,
     ///   fallback으로 내부 캐시를 조회합니다.
     public var currentNavigationController: UINavigationController? {
-        if let selected = tabBarController?.selectedViewController as? UINavigationController {
+        guard let tabBarController else { return nil }
+
+        if let selected = tabBarController.selectedViewController as? UINavigationController {
             return selected
         }
         
         guard let currentTag else { return nil }
         return tabCoordinators[currentTag]
+    }
+
+
+    /// Tab container와 coordinator를 연결합니다.
+    public func attach(to tabBarController: UITabBarController) {
+        self.tabBarController = tabBarController
+
+        if let selectedController = tabBarController.selectedViewController as? UINavigationController,
+           let selectedTag = tabCoordinators.first(where: { $0.value === selectedController })?.key {
+            currentTag = selectedTag
+        }
+    }
+
+
+    /// 연결된 tab container가 해제될 때 controller 캐시와 선택 상태를 정리합니다.
+    ///
+    /// 다른 container가 이미 연결된 경우 이전 container의 dismantle 요청은 무시합니다.
+    public func detach(from tabBarController: UITabBarController? = nil) {
+        if let tabBarController, self.tabBarController !== tabBarController {
+            return
+        }
+
+        self.tabBarController = nil
+        tabCoordinators.removeAll()
+        orderedTags.removeAll()
+        currentTag = nil
     }
     
     

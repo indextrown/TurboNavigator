@@ -9,6 +9,7 @@ import UIKit
 
 /// 네비게이션 스택에 이미 올라가 있는 UIViewController로부터
 /// 해당 화면이 어떤 route로 생성되었는지를 식별하기 위한 프로토콜
+@MainActor
 public protocol AnyRouteIdentifiable {
     
     /// 현재 ViewController를 생성한 route정보를 반환

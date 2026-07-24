@@ -25,16 +25,18 @@ public struct RouteBuilder<Dependencies, Route: Hashable> {
     ///
     ///  - Parameter route: 현재 처리하려는 Route
     ///  - Returns: 처리 가능하면 true, 아니면 false
-    public let matches: (Route) -> Bool
+    public let matches: @MainActor (Route) -> Bool
     
     
     /// RouteContext 기반으로 ViewController를 생성하는 함수
     ///
     /// - Parameter context: Navigator, Route, Dependencies를 포함한 컨텍스트
     /// - Returns: 생성된 ViewController (또는 nil)
-    public let build: (RouteContext<Dependencies, Route>) -> RouteViewController?
+    public let build: @MainActor (RouteContext<Dependencies, Route>) -> RouteViewController?
 
-    let resolve: (RouteContext<Dependencies, Route>) -> (matched: Bool, viewController: RouteViewController?)
+    let resolve: @MainActor (
+        RouteContext<Dependencies, Route>
+    ) -> (matched: Bool, viewController: RouteViewController?)
     
     
     /// RouteBuilder 생성자
@@ -43,8 +45,8 @@ public struct RouteBuilder<Dependencies, Route: Hashable> {
     ///   - matches: Route 매칭 조건
     ///   - build: ViewController 생성 로직
     public init(
-        matches: @escaping (Route) -> Bool,
-        build: @escaping (RouteContext<Dependencies, Route>) -> RouteViewController?
+        matches: @escaping @MainActor (Route) -> Bool,
+        build: @escaping @MainActor (RouteContext<Dependencies, Route>) -> RouteViewController?
     ) {
         self.matches = matches
         self.build = build
@@ -55,9 +57,11 @@ public struct RouteBuilder<Dependencies, Route: Hashable> {
     }
 
     private init(
-        matches: @escaping (Route) -> Bool,
-        build: @escaping (RouteContext<Dependencies, Route>) -> RouteViewController?,
-        resolve: @escaping (RouteContext<Dependencies, Route>) -> (matched: Bool, viewController: RouteViewController?)
+        matches: @escaping @MainActor (Route) -> Bool,
+        build: @escaping @MainActor (RouteContext<Dependencies, Route>) -> RouteViewController?,
+        resolve: @escaping @MainActor (
+            RouteContext<Dependencies, Route>
+        ) -> (matched: Bool, viewController: RouteViewController?)
     ) {
         self.matches = matches
         self.build = build
@@ -77,8 +81,8 @@ extension RouteBuilder {
     ///   - build: ViewController 생성 로직
     /// - Returns: RouteBuilder 인스턴스
     public static func matching(
-        _ matches: @escaping (Route) -> Bool,
-        build: @escaping (RouteContext<Dependencies, Route>) -> RouteViewController?
+        _ matches: @escaping @MainActor (Route) -> Bool,
+        build: @escaping @MainActor (RouteContext<Dependencies, Route>) -> RouteViewController?
     ) -> Self {
         .init(matches: matches, build: build)
     }
@@ -98,8 +102,11 @@ extension RouteBuilder {
     ///       build: { context, id in DetailViewController(id: id) }
     ///   )
     public static func extracting<Value>(
-        _ extract: @escaping (Route) -> Value?,
-        build: @escaping (RouteContext<Dependencies, Route>, Value) -> RouteViewController?
+        _ extract: @escaping @MainActor (Route) -> Value?,
+        build: @escaping @MainActor (
+            RouteContext<Dependencies, Route>,
+            Value
+        ) -> RouteViewController?
     ) -> Self {
         .init(
             matches: { extract($0) != nil },
@@ -125,9 +132,10 @@ extension RouteBuilder where Route: Equatable {
     ///   - route: 비교할 Route
     ///   - build: ViewController 생성 로직
     /// - Returns: RouteBuilder 인스턴스
+    @MainActor
     public static func exact(
         _ route: Route,
-        build: @escaping (RouteContext<Dependencies, Route>) -> RouteViewController?
+        build: @escaping @MainActor (RouteContext<Dependencies, Route>) -> RouteViewController?
     ) -> Self {
         /// route: .home
         /// $0: 나중에 들어오는 값

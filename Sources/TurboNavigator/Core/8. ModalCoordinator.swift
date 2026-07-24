@@ -28,13 +28,15 @@ public struct ModalCoordinator<Dependencies, Route: Hashable> {
     ///
     /// - Note
     ///   테스트 시 mock Navigation Controller 주입 가능
-    public let makeNavigationController: () -> UINavigationController
+    public let makeNavigationController: @MainActor () -> UINavigationController
     
     
     /// 기본 생성자
     /// - Parameter makeNavigationController: 커스텀 UINavigationController 생성 클로저 (기본값: 기본 UINavigationController)
     public init(
-        makeNavigationController: @escaping () -> UINavigationController = { UINavigationController() }
+        makeNavigationController: @escaping @MainActor () -> UINavigationController = {
+            UINavigationController()
+        }
     ) {
         self.makeNavigationController = makeNavigationController
     }
@@ -62,21 +64,24 @@ public struct ModalCoordinator<Dependencies, Route: Hashable> {
     ///   3. registry를 통해 ViewController 배열 생성
     ///   4. navigation stack 구성
     ///   5. modal present
+    @MainActor
     public func present(
         routes: [Route],
         from presenter: UINavigationController?,
         existingModalController: UINavigationController?,
         navigator: Navigator<Dependencies, Route>,
         animated: Bool,
-        presentationStyle: ModalPresentationStyle
+        presentationStyle: ModalPresentationStyle,
+        onPrepared: ((UINavigationController) -> Void)? = nil,
+        completion: ((UINavigationController) -> Void)? = nil
     ) -> UINavigationController? {
-        guard let presenter else { return existingModalController }
+        guard let presenter else { return nil }
         
         // Route -> ViewController 변환
         let viewControllers = navigator.launch(routes)
 
         guard !viewControllers.isEmpty else {
-            return existingModalController
+            return nil
         }
 
         // 새로운 modal navigation 생성
@@ -88,7 +93,10 @@ public struct ModalCoordinator<Dependencies, Route: Hashable> {
         modalController.applyNavigationBarVisibility(for: viewControllers.first)
 
         let presentModal = {
-            presenter.present(modalController, animated: animated)
+            onPrepared?(modalController)
+            presenter.present(modalController, animated: animated) {
+                completion?(modalController)
+            }
         }
 
         if let existingModalController {
@@ -107,6 +115,7 @@ public struct ModalCoordinator<Dependencies, Route: Hashable> {
     ///   - modalController: dismiss할 modal navigation controller
     ///   - animated: 애니메이션 여부
     ///   - completion: dismiss 완료 후 실행할 클로저
+    @MainActor
     public func dismiss(
         modalController: UINavigationController?,
         animated: Bool,
