@@ -4,6 +4,7 @@ import FeatureDetailInterface
 import FeatureSettingsInterface
 
 public enum AppRouter {
+    @MainActor
     public static func buildNavigator(
         homeFactory: any HomeScreenBuilding,
         detailFactory: any DetailScreenBuilding,

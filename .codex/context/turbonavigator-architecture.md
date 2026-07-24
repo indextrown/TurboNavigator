@@ -38,6 +38,9 @@ TurboNavigator is a typed route-based navigation library that lets SwiftUI scree
 - Deep links should resolve to typed route actions before execution.
 - UIKit controller access is intentional for cases SwiftUI `NavigationStack` does not control cleanly.
 - SwiftUI view state and navigation transition policy should remain loosely coupled.
+- UIKit-facing navigator, coordinator, registry builder, and adapter APIs are isolated to `MainActor`.
+- A tab stack is active only while its `UITabBarController` is attached; dismantling the container clears cached controllers.
+- Modal transitions are serialized: repeated presentation is ignored, dismissal requested during presentation is deferred, and stack operations fall back to tab or root until the transition settles.
 
 ## 5. Implementation Boundaries
 

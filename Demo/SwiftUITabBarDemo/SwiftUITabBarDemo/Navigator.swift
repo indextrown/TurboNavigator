@@ -17,6 +17,7 @@ enum AppRoute: Hashable {
 }
 
 enum AppRouter {
+    @MainActor
     static func buildNavigator() -> Navigator<AppDependencies, AppRoute> {
         let registry = RouteRegistry<AppDependencies, AppRoute>()
             .registering(.home) { context in

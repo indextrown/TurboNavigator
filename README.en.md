@@ -302,6 +302,8 @@ Example URLs:
 - Set `disablesSystemTabTransitionAnimation` on `TabNavigationContainer` to `true` if you want to opt out of the iOS 18 system tab transition animation. The same setting applies to both tab-bar taps and `navigator.switchTab(tag:)`.
 - Screens do not need to manipulate `UIViewController` directly; they can just call `navigator`.
 - For deep links, the app receives the URL, the parser converts it into `DeepLink<Route>`, and `navigator.handle(url:parser:)` executes it.
+- Create and call `Navigator`, coordinators, route builders, and SwiftUI/UIKit adapters on the `MainActor` because they manage UIKit state.
+- While a modal transition is in progress, another `present` is ignored and `dismissModal` is deferred until presentation completes. Stack commands target the selected tab or root instead of a stale modal, and a failed modal build keeps the existing modal state.
 
 ## Adoption checklist
 

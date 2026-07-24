@@ -114,6 +114,7 @@ extension NavigatorClient {
 }
 
 enum AppRouter {
+    @MainActor
     static func buildNavigator(store: StoreOf<AppFeature>) -> Navigator<AppDependencies, AppRoute> {
         let registry = RouteRegistry<AppDependencies, AppRoute>()
             .registering(.home) { context in

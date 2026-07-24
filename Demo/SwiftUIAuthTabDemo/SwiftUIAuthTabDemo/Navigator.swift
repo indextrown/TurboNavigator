@@ -13,6 +13,7 @@ enum MainRoute: Hashable {
 }
 
 enum AppRouter {
+    @MainActor
     static func buildAuthNavigator(sessionStore: SessionStore) -> Navigator<AppDependencies, AuthRoute> {
         let dependencies = AppDependencies(
             sessionStore: sessionStore,
@@ -35,6 +36,7 @@ enum AppRouter {
         )
     }
 
+    @MainActor
     static func buildMainNavigator(sessionStore: SessionStore) -> Navigator<AppDependencies, MainRoute> {
         let dependencies = AppDependencies(
             sessionStore: sessionStore,

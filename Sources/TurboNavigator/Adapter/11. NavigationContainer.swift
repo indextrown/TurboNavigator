@@ -30,6 +30,7 @@ import SwiftUI
 /// - Lifecycle:
 ///   - makeUIViewController → 최초 생성 및 초기 화면 구성
 ///   - updateUIViewController → SwiftUI 업데이트 시 rootController 동기화
+@MainActor
 public struct NavigationContainer<Dependencies, Route: Hashable>: UIViewControllerRepresentable {
     
     /// Navigator 인스턴스 (네비게이션 전체 관리)

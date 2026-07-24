@@ -41,6 +41,7 @@ fileprivate struct TabNavigationItemIdentity<Route: Hashable>: Equatable {
 /// - Lifecycle:
 ///   - makeUIViewController → 탭 구성 및 초기 화면 설정
 ///   - updateUIViewController → 선택된 탭 상태 및 UI 동기화
+@MainActor
 public struct TabNavigationContainer<
     Dependencies, Route: Hashable
 >: UIViewControllerRepresentable {
@@ -103,7 +104,7 @@ public struct TabNavigationContainer<
         controller.view.backgroundColor = .clear
         navigator.tabCoordinator.disablesSystemTabTransitionAnimation = disablesSystemTabTransitionAnimation
         context.coordinator.items = items
-        context.coordinator.itemIdentities = items.map(TabNavigationItemIdentity.init)
+        context.coordinator.itemIdentities = items.map { TabNavigationItemIdentity($0) }
         context.coordinator.disablesSystemTabTransitionAnimation = disablesSystemTabTransitionAnimation
         context.coordinator.attach(to: controller)
         
@@ -120,7 +121,7 @@ public struct TabNavigationContainer<
         controller.tabBar.isHidden = isTabBarHidden
         
         // Navigator와 연결
-        navigator.tabCoordinator.tabBarController = controller
+        navigator.tabCoordinator.attach(to: controller)
         return controller
     }
     
@@ -137,11 +138,11 @@ public struct TabNavigationContainer<
     public func updateUIViewController(_ uiViewController: UITabBarController, context: Context) {
         
         // 최신 controller 연결
-        navigator.tabCoordinator.tabBarController = uiViewController
+        navigator.tabCoordinator.attach(to: uiViewController)
         navigator.tabCoordinator.disablesSystemTabTransitionAnimation = disablesSystemTabTransitionAnimation
         context.coordinator.disablesSystemTabTransitionAnimation = disablesSystemTabTransitionAnimation
 
-        let nextIdentity = items.map(TabNavigationItemIdentity.init)
+        let nextIdentity = items.map { TabNavigationItemIdentity($0) }
         let shouldRebuildTabs = context.coordinator.itemIdentities != nextIdentity
             || (uiViewController.viewControllers?.count ?? 0) != items.count
 
@@ -187,6 +188,13 @@ public struct TabNavigationContainer<
         // TabBar 표시 여부 업데이트
         uiViewController.tabBar.isHidden = isTabBarHidden
     }
+
+    public static func dismantleUIViewController(
+        _ uiViewController: UITabBarController,
+        coordinator: Coordinator
+    ) {
+        coordinator.detach(from: uiViewController)
+    }
     
     public final class Coordinator: NSObject, UITabBarControllerDelegate {
         public var items: [TabNavigationItem<Route>]
@@ -201,7 +209,7 @@ public struct TabNavigationContainer<
             disablesSystemTabTransitionAnimation: Bool
         ) {
             self.items = items
-            self.itemIdentities = items.map(TabNavigationItemIdentity.init)
+            self.itemIdentities = items.map { TabNavigationItemIdentity($0) }
             self.navigator = navigator
             self.disablesSystemTabTransitionAnimation = disablesSystemTabTransitionAnimation
         }
@@ -209,6 +217,14 @@ public struct TabNavigationContainer<
         func attach(to controller: UITabBarController) {
             controller.delegate = self
             selectionFeedbackGenerator.prepare()
+        }
+
+        func detach(from controller: UITabBarController) {
+            if controller.delegate === self {
+                controller.delegate = nil
+            }
+
+            navigator.tabCoordinator.detach(from: controller)
         }
         
         public func tabBarController(

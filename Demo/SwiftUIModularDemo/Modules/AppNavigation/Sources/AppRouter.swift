@@ -4,6 +4,7 @@ import FeatureDetail
 import FeatureSettings
 
 public enum AppRouter {
+    @MainActor
     public static func buildNavigator() -> Navigator<AppDependencies, AppRoute> {
         let registry = RouteRegistry<AppDependencies, AppRoute>()
             .registering(.home) { context in

@@ -312,6 +312,8 @@ struct AppDeepLinkParser: DeepLinkParser {
 - 화면에서는 `UIViewController`를 직접 다루지 않고 `navigator`만 호출하면 된다.
 - `backTo`와 `backOrPush`는 route를 추적할 수 있는 화면에서 동작한다. `WrappingController`를 쓰지 않는 UIKit 화면이라면 `AnyRouteIdentifiable`를 직접 채택해야 한다.
 - deep link는 앱이 URL을 받고 parser가 `DeepLink<Route>`로 바꾼 뒤 `navigator.handle(url:parser:)`로 연결한다.
+- `Navigator`, coordinator, route builder, SwiftUI/UIKit adapter는 UIKit 상태를 다루므로 `MainActor`에서 생성하고 호출한다.
+- modal 전환 중 추가 `present`는 무시하고 `dismissModal`은 present 완료 직후 실행한다. 이 동안 stack 명령은 stale modal이 아닌 선택된 tab 또는 root를 대상으로 하며, 새 modal build가 실패하면 기존 modal 상태를 유지한다.
 
 ## Debug 지원
 

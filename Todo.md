@@ -459,11 +459,11 @@ let registry = RouteRegistry<AppDependencies, AppRoute>()
 ### 현재 기준선
 
 - [x] iOS generic destination package build 성공
-- [x] Mac Catalyst에서 테스트 21개 성공
+- [x] Mac Catalyst에서 테스트 29개 성공
 - [x] 라이브러리 라인 커버리지 확인: 51.27% (444/866)
-- [ ] Swift 6 strict-concurrency build 성공
-- [ ] 대표 SwiftUI demo build 성공
-- [ ] 대표 UIKit demo build 성공
+- [x] Swift 6 strict-concurrency build 성공
+- [x] 대표 SwiftUI demo build 성공
+- [x] 대표 UIKit demo build 성공
 
 ### P0: 동작 안정성
 
@@ -477,17 +477,17 @@ let registry = RouteRegistry<AppDependencies, AppRoute>()
 
 체크리스트:
 
-- [ ] `TabCoordinator`에 controller와 캐시를 정리하는 `detach` 동작을 정의한다.
-- [ ] `TabNavigationContainer.dismantleUIViewController`에서 coordinator를 분리한다.
-- [ ] tab container가 사라진 뒤 `activeController`가 숨겨진 tab stack을 반환하지 않게 한다.
-- [ ] tab navigation controller와 화면이 정상적으로 해제되는지 테스트한다.
-- [ ] tab container에서 root container로 전환한 뒤 push 대상이 올바른지 테스트한다.
-- [ ] root, tab, modal의 active stack 우선순위가 유지되는지 확인한다.
+- [x] `TabCoordinator`에 controller와 캐시를 정리하는 `detach` 동작을 정의한다.
+- [x] `TabNavigationContainer.dismantleUIViewController`에서 coordinator를 분리한다.
+- [x] tab container가 사라진 뒤 `activeController`가 숨겨진 tab stack을 반환하지 않게 한다.
+- [x] tab navigation controller와 화면이 정상적으로 해제되는지 테스트한다.
+- [x] tab container에서 root container로 전환한 뒤 push 대상이 올바른지 테스트한다.
+- [x] root, tab, modal의 active stack 우선순위가 유지되는지 확인한다.
 
 완료 조건:
 
-- [ ] 해제된 tab stack으로 navigation 명령이 전달되지 않는다.
-- [ ] tab container 제거 후 불필요한 controller 순환 참조가 남지 않는다.
+- [x] 해제된 tab stack으로 navigation 명령이 전달되지 않는다.
+- [x] tab container 제거 후 불필요한 controller 순환 참조가 남지 않는다.
 
 #### 2. Modal 교체와 dismiss 상태 동기화
 
@@ -498,17 +498,17 @@ let registry = RouteRegistry<AppDependencies, AppRoute>()
 
 체크리스트:
 
-- [ ] 기존 modal dismiss 완료 후 새 modal 상태를 확정하도록 흐름을 변경한다.
-- [ ] 새 modal이 실제로 presentation된 뒤 observer delegate를 연결한다.
-- [ ] interactive dismiss 후 `modalController`가 정리되는지 테스트한다.
-- [ ] modal 교체 중 연속된 present, dismiss 요청의 정책을 정의한다.
-- [ ] dismiss 진행 중 push가 stale modal stack으로 전달되지 않게 한다.
-- [ ] modal 교체 실패 시 기존 navigation 상태가 어떻게 유지될지 정의한다.
+- [x] 기존 modal dismiss 완료 후 새 modal 상태를 확정하도록 흐름을 변경한다.
+- [x] 새 modal이 실제로 presentation된 뒤 observer delegate를 연결한다.
+- [x] interactive dismiss 후 `modalController`가 정리되는지 테스트한다.
+- [x] modal 교체 중 연속된 present, dismiss 요청의 정책을 정의한다.
+- [x] dismiss 진행 중 push가 stale modal stack으로 전달되지 않게 한다.
+- [x] modal 교체 실패 시 기존 navigation 상태가 어떻게 유지될지 정의한다.
 
 완료 조건:
 
-- [ ] modal 교체 후 swipe dismiss를 해도 stale controller가 남지 않는다.
-- [ ] `isModalActive`, `activeController`, debug snapshot이 실제 UI 상태와 일치한다.
+- [x] modal 교체 후 swipe dismiss를 해도 stale controller가 남지 않는다.
+- [x] `isModalActive`, `activeController`, debug snapshot이 실제 UI 상태와 일치한다.
 
 #### 3. Swift 6 MainActor 격리
 
@@ -523,16 +523,16 @@ let registry = RouteRegistry<AppDependencies, AppRoute>()
 
 체크리스트:
 
-- [ ] UIKit을 다루는 Navigator와 coordinator의 actor 경계를 정의한다.
-- [ ] `AnyRouteIdentifiable`과 `WrappingController`의 conformance 격리를 정리한다.
-- [ ] navigation-controller factory closure의 actor 격리를 명시한다.
-- [ ] public API 호출부에 미치는 source compatibility 영향을 확인한다.
-- [ ] 테스트 코드도 동일한 actor 규칙을 따르게 한다.
-- [ ] Swift 5 모드와 Swift 6 모드에서 모두 빌드한다.
+- [x] UIKit을 다루는 Navigator와 coordinator의 actor 경계를 정의한다.
+- [x] `AnyRouteIdentifiable`과 `WrappingController`의 conformance 격리를 정리한다.
+- [x] navigation-controller factory closure의 actor 격리를 명시한다.
+- [x] public API 호출부에 미치는 source compatibility 영향을 확인한다.
+- [x] 테스트 코드도 동일한 actor 규칙을 따르게 한다.
+- [x] Swift 5 모드와 Swift 6 모드에서 모두 빌드한다.
 
 완료 조건:
 
-- [ ] 아래 strict-concurrency build가 성공한다.
+- [x] 아래 strict-concurrency build가 성공한다.
 
 ```bash
 xcodebuild \

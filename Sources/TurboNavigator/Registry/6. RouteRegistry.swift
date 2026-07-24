@@ -56,8 +56,8 @@ public struct RouteRegistry<Dependencies, Route: Hashable> {
     ///   - build: ViewController 생성 로직
     /// - Returns: 새로운 Registry
     public func registering(
-        matching matches: @escaping (Route) -> Bool,
-        build: @escaping(RouteContext<Dependencies, Route>) -> RouteViewController?
+        matching matches: @escaping @MainActor (Route) -> Bool,
+        build: @escaping @MainActor (RouteContext<Dependencies, Route>) -> RouteViewController?
     ) -> Self {
         return registering(.matching(matches, build: build))
     }
@@ -70,8 +70,11 @@ public struct RouteRegistry<Dependencies, Route: Hashable> {
     ///   - build: 추출된 값과 함께 ViewController 생성
     /// - Returns: 새로운 Registry
     public func registering<Value>(
-        extracting extract: @escaping (Route) -> Value?,
-        build: @escaping(RouteContext<Dependencies, Route>, Value) -> RouteViewController?
+        extracting extract: @escaping @MainActor (Route) -> Value?,
+        build: @escaping @MainActor (
+            RouteContext<Dependencies, Route>,
+            Value
+        ) -> RouteViewController?
     ) -> Self {
         return registering(.extracting(extract, build: build))
     }
@@ -90,6 +93,7 @@ public struct RouteRegistry<Dependencies, Route: Hashable> {
     /// 2. builders 순회
     /// 3. matches 조건에 맞는 첫 Builder 선택
     /// 4. build 실행
+    @MainActor
     public func build(
         route: Route,
         navigator: Navigator<Dependencies, Route>,
@@ -120,6 +124,7 @@ public struct RouteRegistry<Dependencies, Route: Hashable> {
     ///   - navigator: Navigator 인스턴스
     ///   - dependencies: 외부 의존성
     /// - Returns: ViewController 배열
+    @MainActor
     public func build(
         routes: [Route],
         navigator: Navigator<Dependencies, Route>,
@@ -153,9 +158,10 @@ extension RouteRegistry where Route: Equatable {
     ///   - route: 정확히 일치할 Route
     ///   - build: ViewController 생성 로직
     /// - Returns: 새로운 Registry
+    @MainActor
     public func registering(
         _ route: Route,
-        build: @escaping (RouteContext<Dependencies, Route>) -> RouteViewController?
+        build: @escaping @MainActor (RouteContext<Dependencies, Route>) -> RouteViewController?
     ) -> Self {
         return registering(.exact(route, build: build))
     }

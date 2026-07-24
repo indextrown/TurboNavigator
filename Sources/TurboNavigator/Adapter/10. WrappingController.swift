@@ -8,11 +8,13 @@
 import SwiftUI
 
 
+@MainActor
 public protocol NavigationBarConfigurable {
     var prefersNavigationBarHidden: Bool { get }
 }
 
 
+@MainActor
 extension UINavigationController {
     func applyNavigationBarVisibility(for viewController: UIViewController?) {
         guard let configurable = viewController as? NavigationBarConfigurable else { return }
@@ -40,6 +42,7 @@ extension UINavigationController {
 /// - Note:
 ///   Navigator 내부에서 route 기반으로 ViewController를 찾기 위해
 ///   `anyRoute`를 사용합니다 (Type Erasure)
+@MainActor
 public final class WrappingController<
     Route: Hashable, Content: View
 >: UIHostingController<Content>, AnyRouteIdentifiable, NavigationBarConfigurable {

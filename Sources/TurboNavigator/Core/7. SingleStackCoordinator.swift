@@ -17,10 +17,11 @@ import UIKit
 ///
 /// - Generic Parameters:
 ///   - Route: 화면 상태를 나타내는 라우트 타입 (Hashable 필요)
+@MainActor
 public struct SingleStackCoordinator<Route: Hashable> {
     
     
-    public init() {}
+    nonisolated public init() {}
     
     
     /// 현재 UINavigationController 스택을 Route 배열로 변환하여 반환
