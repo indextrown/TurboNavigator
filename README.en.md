@@ -32,6 +32,7 @@ You build screens with SwiftUI and drive transitions through `enum` routes and `
 - [Usage notes](#usage-notes)
 - [API and time complexity](#api-and-time-complexity)
 - [Architecture](#architecture)
+- [Using TurboNavigator with TCA](#using-turbonavigator-with-tca)
 
 ## What problem does it solve?
 
@@ -432,6 +433,153 @@ flowchart TD
     Q --> U
     R --> U
 ```
+
+## Using TurboNavigator with TCA
+
+TCA owns screen state and user actions, while `TurboNavigator` performs the UIKit transitions. Routing navigation through a TCA dependency keeps `Navigator` out of feature modules and makes transition requests straightforward to test.
+
+```text
+SwiftUI View
+→ TCA Action
+→ DemoNavigationClient
+→ AppNavigation
+→ TurboNavigator
+→ UINavigationController
+```
+
+### 1. Define the routes and navigation dependency
+
+Define the app routes and TCA dependency in a shared module.
+
+```swift
+import ComposableArchitecture
+
+public enum AppRoute: Hashable, Sendable {
+  case home
+  case detail(id: String)
+  case settings
+}
+
+public struct DemoNavigationClient: Sendable {
+  public var push: @MainActor @Sendable (AppRoute) -> Void
+  public var present: @MainActor @Sendable (AppRoute) -> Void
+  public var back: @MainActor @Sendable () -> Void
+
+  public init(
+    push: @escaping @MainActor @Sendable (AppRoute) -> Void,
+    present: @escaping @MainActor @Sendable (AppRoute) -> Void,
+    back: @escaping @MainActor @Sendable () -> Void
+  ) {
+    self.push = push
+    self.present = present
+    self.back = back
+  }
+
+  public static let noop = Self(
+    push: { _ in },
+    present: { _ in },
+    back: {}
+  )
+}
+
+private enum DemoNavigationClientKey: DependencyKey {
+  static let liveValue = DemoNavigationClient.noop
+  static let testValue = DemoNavigationClient.noop
+}
+
+public extension DependencyValues {
+  var demoNavigation: DemoNavigationClient {
+    get { self[DemoNavigationClientKey.self] }
+    set { self[DemoNavigationClientKey.self] = newValue }
+  }
+}
+```
+
+### 2. Request transitions from the reducer
+
+Feature modules do not import `TurboNavigator` or UIKit. Their reducers call the navigation dependency in response to user actions.
+
+```swift
+@Reducer
+public struct HomeFeature {
+  @ObservableState
+  public struct State: Equatable, Sendable {
+    public init() {}
+  }
+
+  public enum Action: Equatable, Sendable {
+    case detailTapped
+    case settingsTapped
+  }
+
+  @Dependency(\.demoNavigation) private var navigation
+
+  public init() {}
+
+  public var body: some ReducerOf<Self> {
+    Reduce { _, action in
+      switch action {
+      case .detailTapped:
+        return .run { [navigation] _ in
+          await navigation.push(.detail(id: "42"))
+        }
+
+      case .settingsTapped:
+        return .run { [navigation] _ in
+          await navigation.present(.settings)
+        }
+      }
+    }
+  }
+}
+```
+
+### 3. Connect `Navigator` at the composition root
+
+The `AppNavigation` module maps the TCA dependency to real `Navigator` commands.
+
+```swift
+private extension DemoNavigationClient {
+  @MainActor
+  static func live(
+    navigator: Navigator<AppDependencies, AppRoute>
+  ) -> Self {
+    Self(
+      push: { navigator.push($0) },
+      present: { navigator.present($0) },
+      back: { navigator.back() }
+    )
+  }
+}
+```
+
+Inject the live dependency when `RouteRegistry` creates a feature Store.
+
+```swift
+let registry = RouteRegistry<AppDependencies, AppRoute>()
+  .registering(.home) { context in
+    let store = Store(initialState: HomeFeature.State()) {
+      HomeFeature()
+    } withDependencies: {
+      $0.demoNavigation = .live(navigator: context.navigator)
+    }
+
+    return WrappingController(route: context.route, title: "Home") {
+      HomeView(store: store)
+    }
+  }
+```
+
+Create the `Navigator` and pass it to `NavigationContainer` or `TabNavigationContainer` in the same way as the standard setup.
+
+### 4. Test reducers and real transitions separately
+
+- In reducer tests, replace `DemoNavigationClient` with a test implementation and verify which routes each action requests.
+- In UI tests, exercise the complete path from a TCA action through `DemoNavigationClient`, `TurboNavigator`, and the UIKit controller hierarchy.
+
+In this setup, `TurboNavigator` and UIKit own the navigation stack. If routes must be the source of truth in TCA State for restoration across app launches, add an explicit policy that synchronizes State with `currentRoutes()`.
+
+See the [TCA + TurboNavigator modular demo](./Demo/SwiftUITCATurboModularDemo) for the complete module layout and tests.
 
 <!-- ## Sample app
 

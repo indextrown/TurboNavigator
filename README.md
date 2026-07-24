@@ -34,6 +34,7 @@
 - [SwiftUI Preview](#swiftui-preview)
 - [API와 시간 복잡도](#api와-시간-복잡도)
 - [아키텍처](#아키텍처)
+- [TCA와 함께 사용하기](#tca와-함께-사용하기)
 
 ## 해결하는 문제
 
@@ -541,6 +542,153 @@ flowchart TD
     Q --> U
     R --> U
 ```
+
+## TCA와 함께 사용하기
+
+TCA는 화면의 상태와 사용자 액션을 관리하고, `TurboNavigator`는 실제 UIKit 화면 전환을 담당합니다. Feature에서 `Navigator`를 직접 호출하지 않고 TCA dependency를 거치면 화면 전환 코드를 테스트하기 쉽고 모듈 경계도 선명해집니다.
+
+```text
+SwiftUI View
+→ TCA Action
+→ DemoNavigationClient
+→ AppNavigation
+→ TurboNavigator
+→ UINavigationController
+```
+
+### 1. Route와 navigation dependency를 정의합니다
+
+공유 모듈에 앱의 route와 TCA dependency를 정의합니다.
+
+```swift
+import ComposableArchitecture
+
+public enum AppRoute: Hashable, Sendable {
+  case home
+  case detail(id: String)
+  case settings
+}
+
+public struct DemoNavigationClient: Sendable {
+  public var push: @MainActor @Sendable (AppRoute) -> Void
+  public var present: @MainActor @Sendable (AppRoute) -> Void
+  public var back: @MainActor @Sendable () -> Void
+
+  public init(
+    push: @escaping @MainActor @Sendable (AppRoute) -> Void,
+    present: @escaping @MainActor @Sendable (AppRoute) -> Void,
+    back: @escaping @MainActor @Sendable () -> Void
+  ) {
+    self.push = push
+    self.present = present
+    self.back = back
+  }
+
+  public static let noop = Self(
+    push: { _ in },
+    present: { _ in },
+    back: {}
+  )
+}
+
+private enum DemoNavigationClientKey: DependencyKey {
+  static let liveValue = DemoNavigationClient.noop
+  static let testValue = DemoNavigationClient.noop
+}
+
+public extension DependencyValues {
+  var demoNavigation: DemoNavigationClient {
+    get { self[DemoNavigationClientKey.self] }
+    set { self[DemoNavigationClientKey.self] = newValue }
+  }
+}
+```
+
+### 2. Reducer에서 화면 전환을 요청합니다
+
+Feature는 `TurboNavigator`나 UIKit을 import하지 않습니다. 사용자 액션을 받은 reducer가 navigation dependency를 호출합니다.
+
+```swift
+@Reducer
+public struct HomeFeature {
+  @ObservableState
+  public struct State: Equatable, Sendable {
+    public init() {}
+  }
+
+  public enum Action: Equatable, Sendable {
+    case detailTapped
+    case settingsTapped
+  }
+
+  @Dependency(\.demoNavigation) private var navigation
+
+  public init() {}
+
+  public var body: some ReducerOf<Self> {
+    Reduce { _, action in
+      switch action {
+      case .detailTapped:
+        return .run { [navigation] _ in
+          await navigation.push(.detail(id: "42"))
+        }
+
+      case .settingsTapped:
+        return .run { [navigation] _ in
+          await navigation.present(.settings)
+        }
+      }
+    }
+  }
+}
+```
+
+### 3. Composition root에서 `Navigator`를 연결합니다
+
+`AppNavigation` 모듈에서 TCA dependency를 실제 `Navigator` 명령으로 변환합니다.
+
+```swift
+private extension DemoNavigationClient {
+  @MainActor
+  static func live(
+    navigator: Navigator<AppDependencies, AppRoute>
+  ) -> Self {
+    Self(
+      push: { navigator.push($0) },
+      present: { navigator.present($0) },
+      back: { navigator.back() }
+    )
+  }
+}
+```
+
+`RouteRegistry`가 Feature의 Store를 만들 때 live dependency를 주입합니다.
+
+```swift
+let registry = RouteRegistry<AppDependencies, AppRoute>()
+  .registering(.home) { context in
+    let store = Store(initialState: HomeFeature.State()) {
+      HomeFeature()
+    } withDependencies: {
+      $0.demoNavigation = .live(navigator: context.navigator)
+    }
+
+    return WrappingController(route: context.route, title: "Home") {
+      HomeView(store: store)
+    }
+  }
+```
+
+마지막으로 일반 사용법과 동일하게 `Navigator`를 생성하고 `NavigationContainer` 또는 `TabNavigationContainer`에 전달합니다.
+
+### 4. Reducer와 실제 화면 전환을 나눠서 테스트합니다
+
+- Reducer 테스트에서는 `DemoNavigationClient`를 대역으로 교체하고 액션이 올바른 route를 요청하는지 확인합니다.
+- UI 테스트에서는 TCA 액션부터 `DemoNavigationClient`, `TurboNavigator`, UIKit 화면 계층까지 전체 경로를 확인합니다.
+
+이 구조에서는 `TurboNavigator`와 UIKit이 화면 스택을 소유합니다. 앱 재실행 후 화면 복원처럼 route를 TCA State의 원본 데이터로 관리해야 한다면 `currentRoutes()` 결과를 상태와 동기화하는 별도 정책을 추가하세요.
+
+전체 모듈 구성과 테스트 코드는 [TCA + TurboNavigator 모듈러 예제](./Demo/SwiftUITCATurboModularDemo)에서 확인할 수 있습니다.
 
 <!-- ## 샘플 앱
 
